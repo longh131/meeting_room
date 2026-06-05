@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Tenant extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        'name', 'domain', 'contact_name', 'contact_phone', 'contact_email',
+        'status', 'subscription_until'
+    ];
+
+    protected $casts = [
+        'subscription_until' => 'date',
+        'status' => 'boolean',
+    ];
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function departments()
+    {
+        return $this->hasMany(Department::class);
+    }
+
+    public function meetingRooms()
+    {
+        return $this->hasMany(MeetingRoom::class);
+    }
+
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    public function isActive()
+    {
+        if (!$this->status) {
+            return false;
+        }
+        if ($this->subscription_until && $this->subscription_until->lt(now())) {
+            return false;
+        }
+        return true;
+    }
+
+    public function getStats()
+    {
+        return [
+            'users_count' => $this->users()->count(),
+            'rooms_count' => $this->meetingRooms()->count(),
+            'reservations_count' => $this->reservations()->count(),
+            'active_reservations_count' => $this->reservations()->whereIn('status', [1, 2])->count(),
+        ];
+    }
+}
