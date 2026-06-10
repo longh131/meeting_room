@@ -176,7 +176,7 @@ const handleCurrentChange = (val) => {
 }
 
 const goPadDisplay = (room) => {
-  window.open(`/pad/${room.id}`, '_blank')
+  window.open(`/pad/${room.access_code}`, '_blank')
 }
 
 onMounted(() => {

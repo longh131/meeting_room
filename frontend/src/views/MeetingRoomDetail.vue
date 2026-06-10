@@ -139,7 +139,7 @@ const goCreateReservation = () => {
 }
 
 const goPadDisplay = () => {
-  window.open(`/pad/${room.value.id}`, '_blank')
+  window.open(`/pad/${room.value.access_code}`, '_blank')
 }
 
 const loadRoom = async () => {

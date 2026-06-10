@@ -41,6 +41,7 @@
             <el-menu-item index="/admin/departments">部门管理</el-menu-item>
             <el-menu-item index="/admin/meeting-rooms">会议室管理</el-menu-item>
             <el-menu-item index="/admin/device-tags">设备标签</el-menu-item>
+            <el-menu-item index="/admin/im-config">IM配置</el-menu-item>
           </el-sub-menu>
         </template>
       </template>

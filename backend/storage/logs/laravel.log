@@ -2021,3 +2021,11 @@ Did you mean one of these?
 #44 /www/wwwroot/meeting.sisuu.com/backend/artisan(12): Illuminate\\Foundation\\Console\\Kernel->handle()
 #45 {main}
 "} 
+[2026-06-09 17:04:11] production.ERROR: Command "tinker" is not defined. {"exception":"[object] (Symfony\\Component\\Console\\Exception\\CommandNotFoundException(code: 0): Command \"tinker\" is not defined. at /www/wwwroot/meeting.sisuu.com/backend/vendor/symfony/console/Application.php:745)
+[stacktrace]
+#0 /www/wwwroot/meeting.sisuu.com/backend/vendor/symfony/console/Application.php(266): Symfony\\Component\\Console\\Application->find()
+#1 /www/wwwroot/meeting.sisuu.com/backend/vendor/symfony/console/Application.php(175): Symfony\\Component\\Console\\Application->doRun()
+#2 /www/wwwroot/meeting.sisuu.com/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
+#3 /www/wwwroot/meeting.sisuu.com/backend/artisan(12): Illuminate\\Foundation\\Console\\Kernel->handle()
+#4 {main}
+"} 

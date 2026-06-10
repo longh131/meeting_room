@@ -12,12 +12,21 @@ class Tenant extends Model
 
     protected $fillable = [
         'name', 'domain', 'contact_name', 'contact_phone', 'contact_email',
-        'status', 'subscription_until'
+        'status', 'subscription_until',
+        // 钉钉配置
+        'dingtalk_enabled', 'dingtalk_app_key', 'dingtalk_app_secret',
+        'dingtalk_corp_id', 'dingtalk_agent_id', 'dingtalk_process_code',
+        // 飞书配置
+        'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_approval_code',
+        // IM通知渠道
+        'im_notification_channel',
     ];
 
     protected $casts = [
         'subscription_until' => 'date',
         'status' => 'boolean',
+        'dingtalk_enabled' => 'boolean',
+        'feishu_enabled' => 'boolean',
     ];
 
     public function users()

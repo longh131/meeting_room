@@ -14,8 +14,30 @@ use App\Http\Controllers\DeviceTagController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\AdminReportController;
+use App\Http\Controllers\OAuthController;
+use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\ApprovalCallbackController;
 
 Route::post('/login', [AuthController::class, 'login']);
+
+// OAuth登录路由
+Route::get('/oauth/config', [OAuthController::class, 'getOAuthConfig']);
+Route::get('/oauth/jsapi-config', [OAuthController::class, 'getJsApiConfig']);
+Route::get('/oauth/callback/dingtalk', [OAuthController::class, 'dingtalkCallback']);
+Route::get('/oauth/callback/feishu', [OAuthController::class, 'feishuCallback']);
+
+// 组织架构同步路由
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/organization/department-tree', [OrganizationController::class, 'getDepartmentTree']);
+    Route::get('/organization/users-by-department', [OrganizationController::class, 'getUsersByDepartment']);
+    Route::post('/organization/sync', [OrganizationController::class, 'sync']);
+    Route::post('/organization/sync-to-local', [OrganizationController::class, 'syncToLocal']);
+});
+
+// 审批回调路由（不需要认证，由IM平台验证，需要携带tenant_id）
+Route::post('/callback/approval/dingtalk', [ApprovalCallbackController::class, 'dingtalkCallback']);
+Route::post('/callback/approval/feishu', [ApprovalCallbackController::class, 'feishuCallback']);
+Route::get('/callback/verify', [ApprovalCallbackController::class, 'verify']);
 
 Route::get('/pad/{id}', [MeetingRoomController::class, 'padDisplay']);
 Route::post('/pad/checkin/{roomCode}', [MeetingRoomController::class, 'padCheckin']);
@@ -76,6 +98,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/departments', [DepartmentController::class, 'store']);
         Route::put('/departments/{id}', [DepartmentController::class, 'update']);
         Route::delete('/departments/{id}', [DepartmentController::class, 'destroy']);
+
+        // IM配置路由（租户管理员）
+        Route::get('/tenants/im-config', [TenantController::class, 'getIMConfig']);
+        Route::put('/tenants/im-config', [TenantController::class, 'updateIMConfig']);
     });
 
     Route::prefix('admin')->middleware('super_admin')->group(function () {

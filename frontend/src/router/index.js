@@ -7,6 +7,11 @@ const routes = [
     component: () => import('@/views/PadDisplay.vue'),
   },
   {
+    path: '/checkin/:accessCode',
+    name: 'Checkin',
+    component: () => import('@/views/Checkin.vue'),
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/Login.vue'),
@@ -94,6 +99,12 @@ const routes = [
     path: '/admin/departments',
     name: 'AdminDepartments',
     component: () => import('@/views/admin/Departments.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/im-config',
+    name: 'AdminIMConfig',
+    component: () => import('@/views/admin/IMConfig.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {

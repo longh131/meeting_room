@@ -13,7 +13,7 @@ class MeetingRoom extends Model
 
     protected $fillable = [
         'tenant_id', 'name', 'code', 'floor', 'capacity', 'description', 'photo', 'floor_plan',
-        'device_tags', 'hourly_rate', 'status', 'sort_order'
+        'device_tags', 'hourly_rate', 'status', 'sort_order', 'access_code'
     ];
 
     protected $casts = [

@@ -78,9 +78,29 @@ class MeetingRoomController extends Controller
             'floor_plan' => $request->floor_plan,
             'hourly_rate' => $request->hourly_rate,
             'status' => 1,
+            'access_code' => $this->generateAccessCode(),
         ]);
 
         return response()->json($room, 201);
+    }
+
+    /**
+     * 生成8位随机访问码（大小写字母+数字）
+     */
+    private function generateAccessCode()
+    {
+        $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        $code = '';
+        $max = strlen($characters) - 1;
+        
+        do {
+            $code = '';
+            for ($i = 0; $i < 8; $i++) {
+                $code .= $characters[random_int(0, $max)];
+            }
+        } while (MeetingRoom::where('access_code', $code)->exists());
+        
+        return $code;
     }
 
     public function update(Request $request, $id)
@@ -147,10 +167,11 @@ class MeetingRoomController extends Controller
 
     /**
      * 获取会议室PAD显示信息（当前状态、二维码等）
+     * 通过access_code访问，确保租户隔离
      */
-    public function padDisplay($id)
+    public function padDisplay($accessCode)
     {
-        $room = MeetingRoom::findOrFail($id);
+        $room = MeetingRoom::where('access_code', $accessCode)->firstOrFail();
         
         // 获取当前和近期的预定
         $now = now();
@@ -168,8 +189,8 @@ class MeetingRoomController extends Controller
             ->with('user', 'attendees')
             ->first();
             
-        // 生成二维码内容（签到地址）
-        $qrCodeContent = url("/api/pad/checkin/{$room->code}");
+        // 生成二维码内容（签到页面地址），使用access_code确保租户隔离
+        $qrCodeContent = url("/checkin/{$room->access_code}");
         
         // 计算会议室状态：0=空闲，1=使用中，2=即将使用（30分钟内）
         $status = 0;
@@ -200,17 +221,19 @@ class MeetingRoomController extends Controller
     }
 
     /**
-     * 通过会议室CODE签到
+     * 通过会议室access_code签到，支持钉钉/飞书身份验证
      */
-    public function padCheckin($roomCode)
+    public function padCheckin($accessCode)
     {
-        $room = MeetingRoom::where('code', $roomCode)->firstOrFail();
+        $room = MeetingRoom::where('access_code', $accessCode)->firstOrFail();
+        $tenant = $room->tenant;
         
         $now = now();
         $currentReservation = $room->reservations()
             ->whereNotIn('status', [4, 5])
-            ->where('start_time', '<=', $now)
+            ->where('start_time', '<=', $now->copy()->addMinutes(30)) // 提前30分钟可签到
             ->where('end_time', '>', $now)
+            ->with('attendees')
             ->first();
             
         if (!$currentReservation) {
@@ -219,6 +242,35 @@ class MeetingRoomController extends Controller
         
         if ($currentReservation->checkin_time) {
             return response()->json(['message' => '会议已签到'], 400);
+        }
+        
+        // 获取用户身份（支持钉钉/飞书OAuth或本地token）
+        $user = $this->getUserFromRequest();
+        
+        if (!$user) {
+            return response()->json(['message' => '无法识别用户身份'], 401);
+        }
+        
+        // 验证用户是否是参会人员或组织者
+        $isValidAttendee = false;
+        
+        // 检查是否是组织者
+        if ($currentReservation->user_id == $user->id) {
+            $isValidAttendee = true;
+        }
+        
+        // 检查是否是参会人员
+        if (!$isValidAttendee && $currentReservation->attendees) {
+            foreach ($currentReservation->attendees as $attendee) {
+                if ($attendee->user_id == $user->id) {
+                    $isValidAttendee = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!$isValidAttendee) {
+            return response()->json(['message' => '您不是本次会议的参会人员'], 403);
         }
         
         // 签到
@@ -231,5 +283,84 @@ class MeetingRoomController extends Controller
             'message' => '签到成功',
             'reservation' => $currentReservation,
         ]);
+    }
+    
+    /**
+     * 从请求中获取用户身份
+     * 支持：JWT token、钉钉OAuth、飞书OAuth
+     */
+    private function getUserFromRequest()
+    {
+        $token = request()->header('Authorization');
+        
+        // 尝试通过JWT token获取用户
+        if ($token && str_starts_with($token, 'Bearer ')) {
+            $jwtToken = substr($token, 7);
+            try {
+                $payload = \Firebase\JWT\JWT::decode(
+                    $jwtToken,
+                    new \Firebase\JWT\Key(config('app.key'), 'HS256')
+                );
+                return \App\Models\User::find($payload->sub);
+            } catch (\Exception $e) {
+                // JWT验证失败，继续尝试其他方式
+            }
+        }
+        
+        // 尝试通过钉钉临时授权码获取用户
+        $dingtalkCode = request()->input('dingtalk_code');
+        if ($dingtalkCode && request()->input('tenant_id')) {
+            try {
+                $tenant = \App\Models\Tenant::find(request()->input('tenant_id'));
+                if ($tenant && $tenant->dingtalk_enabled) {
+                    $imService = \App\Services\IM\IMServiceFactory::createDingtalkService($tenant->id);
+                    $userInfo = $imService->getUserByAuthCode($dingtalkCode);
+                    
+                    // 查找或创建用户
+                    return \App\Models\User::firstOrCreate(
+                        ['dingtalk_user_id' => $userInfo['user_id']],
+                        [
+                            'name' => $userInfo['name'],
+                            'email' => $userInfo['email'] ?? '',
+                            'phone' => $userInfo['mobile'] ?? '',
+                            'tenant_id' => $tenant->id,
+                            'source' => 'DINGTALK',
+                            'status' => true,
+                        ]
+                    );
+                }
+            } catch (\Exception $e) {
+                // 钉钉验证失败
+            }
+        }
+        
+        // 尝试通过飞书临时授权码获取用户
+        $feishuCode = request()->input('feishu_code');
+        if ($feishuCode && request()->input('tenant_id')) {
+            try {
+                $tenant = \App\Models\Tenant::find(request()->input('tenant_id'));
+                if ($tenant && $tenant->feishu_enabled) {
+                    $imService = \App\Services\IM\IMServiceFactory::createFeishuService($tenant->id);
+                    $userInfo = $imService->getUserByAuthCode($feishuCode);
+                    
+                    // 查找或创建用户
+                    return \App\Models\User::firstOrCreate(
+                        ['feishu_open_id' => $userInfo['open_id']],
+                        [
+                            'name' => $userInfo['name'],
+                            'email' => $userInfo['email'] ?? '',
+                            'phone' => $userInfo['mobile'] ?? '',
+                            'tenant_id' => $tenant->id,
+                            'source' => 'FEISHU',
+                            'status' => true,
+                        ]
+                    );
+                }
+            } catch (\Exception $e) {
+                // 飞书验证失败
+            }
+        }
+        
+        return null;
     }
 }

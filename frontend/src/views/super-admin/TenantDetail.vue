@@ -55,6 +55,76 @@
       </el-row>
     </div>
 
+    <div class="im-config-section">
+      <div class="section-header">
+        <h2>IM配置</h2>
+        <el-button type="primary" @click="saveIMConfig" :loading="saving">
+          <DocumentChecked />
+          保存配置
+        </el-button>
+      </div>
+
+      <div class="im-tabs">
+        <el-tabs v-model="activeIMTab" type="card">
+          <el-tab-pane label="钉钉配置" name="dingtalk">
+            <el-form :model="imConfig" label-width="150px" class="im-form">
+              <el-form-item label="启用钉钉">
+                <el-switch v-model="imConfig.dingtalk_enabled" />
+              </el-form-item>
+              <el-form-item label="AppKey">
+                <el-input v-model="imConfig.dingtalk_app_key" placeholder="钉钉应用AppKey" />
+              </el-form-item>
+              <el-form-item label="AppSecret">
+                <el-input v-model="imConfig.dingtalk_app_secret" placeholder="钉钉应用AppSecret" type="password" />
+              </el-form-item>
+              <el-form-item label="CorpId">
+                <el-input v-model="imConfig.dingtalk_corp_id" placeholder="钉钉企业CorpId" />
+              </el-form-item>
+              <el-form-item label="AgentId">
+                <el-input v-model="imConfig.dingtalk_agent_id" placeholder="钉钉应用AgentId" />
+              </el-form-item>
+              <el-form-item label="审批流程Code">
+                <el-input v-model="imConfig.dingtalk_process_code" placeholder="钉钉审批流程Code" />
+              </el-form-item>
+            </el-form>
+          </el-tab-pane>
+          <el-tab-pane label="飞书配置" name="feishu">
+            <el-form :model="imConfig" label-width="150px" class="im-form">
+              <el-form-item label="启用飞书">
+                <el-switch v-model="imConfig.feishu_enabled" />
+              </el-form-item>
+              <el-form-item label="AppId">
+                <el-input v-model="imConfig.feishu_app_id" placeholder="飞书应用AppId" />
+              </el-form-item>
+              <el-form-item label="AppSecret">
+                <el-input v-model="imConfig.feishu_app_secret" placeholder="飞书应用AppSecret" type="password" />
+              </el-form-item>
+              <el-form-item label="审批定义Code">
+                <el-input v-model="imConfig.feishu_approval_code" placeholder="飞书审批定义Code" />
+              </el-form-item>
+            </el-form>
+          </el-tab-pane>
+          <el-tab-pane label="通知设置" name="notification">
+            <el-form :model="imConfig" label-width="150px" class="im-form">
+              <el-form-item label="默认通知渠道">
+                <el-select v-model="imConfig.im_notification_channel">
+                  <el-option label="日志记录" value="log" />
+                  <el-option label="钉钉工作消息" value="dingtalk" />
+                  <el-option label="飞书机器人消息" value="feishu" />
+                </el-select>
+              </el-form-item>
+              <el-form-item>
+                <el-alert title="回调URL说明" type="info" :closable="false">
+                  <p>审批回调URL: <code>{{ callbackUrl }}/callback/approval/dingtalk</code></p>
+                  <p>审批回调URL(飞书): <code>{{ callbackUrl }}/callback/approval/feishu</code></p>
+                </el-alert>
+              </el-form-item>
+            </el-form>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+    </div>
+
     <div class="stats-section">
       <h2>统计概览</h2>
       <div class="stats-grid">
@@ -141,8 +211,9 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Plus } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, DocumentChecked } from '@element-plus/icons-vue'
 import axios from '@/utils/axios'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -159,6 +230,8 @@ const stats = ref({
   active_reservations: 0,
 })
 const admins = ref([])
+const saving = ref(false)
+const activeIMTab = ref('dingtalk')
 
 const showCreateAdminModal = ref(false)
 const adminForm = reactive({
@@ -166,6 +239,27 @@ const adminForm = reactive({
   email: '',
   password: '',
   phone: '',
+})
+
+const imConfig = reactive({
+  // 钉钉配置
+  dingtalk_enabled: false,
+  dingtalk_app_key: '',
+  dingtalk_app_secret: '',
+  dingtalk_corp_id: '',
+  dingtalk_agent_id: '',
+  dingtalk_process_code: '',
+  // 飞书配置
+  feishu_enabled: false,
+  feishu_app_id: '',
+  feishu_app_secret: '',
+  feishu_approval_code: '',
+  // 通知渠道
+  im_notification_channel: 'log',
+})
+
+const callbackUrl = computed(() => {
+  return window.location.origin
 })
 
 const chartOption = computed(() => {
@@ -194,8 +288,38 @@ const fetchTenant = async () => {
     // axios拦截器已经返回response.data，所以response就是后端数据
     tenant.value = response.tenant
     stats.value = response.stats
+    
+    // 加载IM配置
+    const t = response.tenant
+    imConfig.dingtalk_enabled = t.dingtalk_enabled || false
+    imConfig.dingtalk_app_key = t.dingtalk_app_key || ''
+    imConfig.dingtalk_app_secret = t.dingtalk_app_secret || ''
+    imConfig.dingtalk_corp_id = t.dingtalk_corp_id || ''
+    imConfig.dingtalk_agent_id = t.dingtalk_agent_id || ''
+    imConfig.dingtalk_process_code = t.dingtalk_process_code || ''
+    
+    imConfig.feishu_enabled = t.feishu_enabled || false
+    imConfig.feishu_app_id = t.feishu_app_id || ''
+    imConfig.feishu_app_secret = t.feishu_app_secret || ''
+    imConfig.feishu_approval_code = t.feishu_approval_code || ''
+    
+    imConfig.im_notification_channel = t.im_notification_channel || 'log'
   } catch (error) {
     console.error('Failed to fetch tenant:', error)
+  }
+}
+
+const saveIMConfig = async () => {
+  saving.value = true
+  try {
+    await axios.put(`/admin/tenants/${tenantId}`, imConfig)
+    ElMessage.success('IM配置保存成功')
+    fetchTenant()
+  } catch (error) {
+    ElMessage.error('保存失败，请重试')
+    console.error('Failed to save IM config:', error)
+  } finally {
+    saving.value = false
   }
 }
 
@@ -287,12 +411,20 @@ onMounted(() => {
   margin: 0;
 }
 
-.info-section, .stats-section, .monthly-section, .admin-section {
+.info-section, .im-config-section, .stats-section, .monthly-section, .admin-section {
   background: #fff;
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.im-form {
+  padding-top: 20px;
+}
+
+.im-form .el-form-item {
+  margin-bottom: 20px;
 }
 
 .info-section h2, .stats-section h2, .monthly-section h2 {

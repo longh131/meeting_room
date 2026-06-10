@@ -83,11 +83,35 @@ class TenantController extends Controller
             'contact_email' => 'nullable|email|max:100',
             'subscription_until' => 'nullable|date',
             'status' => 'nullable|in:0,1',
+            
+            // 钉钉配置
+            'dingtalk_enabled' => 'nullable|boolean',
+            'dingtalk_app_key' => 'nullable|string|max:100',
+            'dingtalk_app_secret' => 'nullable|string|max:100',
+            'dingtalk_corp_id' => 'nullable|string|max:100',
+            'dingtalk_agent_id' => 'nullable|string|max:50',
+            'dingtalk_process_code' => 'nullable|string|max:100',
+            
+            // 飞书配置
+            'feishu_enabled' => 'nullable|boolean',
+            'feishu_app_id' => 'nullable|string|max:100',
+            'feishu_app_secret' => 'nullable|string|max:100',
+            'feishu_approval_code' => 'nullable|string|max:100',
+            
+            // IM通知渠道
+            'im_notification_channel' => 'nullable|in:log,dingtalk,feishu',
         ]);
 
         $tenant->update($request->only([
             'name', 'domain', 'contact_name', 'contact_phone',
-            'contact_email', 'subscription_until', 'status'
+            'contact_email', 'subscription_until', 'status',
+            // 钉钉配置
+            'dingtalk_enabled', 'dingtalk_app_key', 'dingtalk_app_secret',
+            'dingtalk_corp_id', 'dingtalk_agent_id', 'dingtalk_process_code',
+            // 飞书配置
+            'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_approval_code',
+            // IM通知渠道
+            'im_notification_channel',
         ]));
 
         return response()->json($tenant);
@@ -185,5 +209,90 @@ class TenantController extends Controller
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * 获取当前租户的IM配置
+     */
+    public function getIMConfig(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->tenant_id) {
+            return response()->json(['message' => '当前用户不属于任何租户'], 400);
+        }
+
+        $tenant = Tenant::findOrFail($user->tenant_id);
+
+        return response()->json([
+            'dingtalk_enabled' => $tenant->dingtalk_enabled,
+            'dingtalk_corp_id' => $tenant->dingtalk_corp_id,
+            'dingtalk_app_key' => $tenant->dingtalk_app_key,
+            'dingtalk_app_secret' => $tenant->dingtalk_app_secret,
+            'dingtalk_agent_id' => $tenant->dingtalk_agent_id,
+            'dingtalk_process_code' => $tenant->dingtalk_process_code,
+            'feishu_enabled' => $tenant->feishu_enabled,
+            'feishu_app_id' => $tenant->feishu_app_id,
+            'feishu_app_secret' => $tenant->feishu_app_secret,
+            'feishu_approval_code' => $tenant->feishu_approval_code,
+            'im_notification_channel' => $tenant->im_notification_channel,
+        ]);
+    }
+
+    /**
+     * 更新当前租户的IM配置
+     */
+    public function updateIMConfig(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->tenant_id) {
+            return response()->json(['message' => '当前用户不属于任何租户'], 400);
+        }
+
+        $tenant = Tenant::findOrFail($user->tenant_id);
+
+        $request->validate([
+            // 钉钉配置
+            'dingtalk_enabled' => 'nullable|boolean',
+            'dingtalk_corp_id' => 'nullable|string|max:100',
+            'dingtalk_app_key' => 'nullable|string|max:100',
+            'dingtalk_app_secret' => 'nullable|string|max:100',
+            'dingtalk_agent_id' => 'nullable|string|max:50',
+            'dingtalk_process_code' => 'nullable|string|max:100',
+            
+            // 飞书配置
+            'feishu_enabled' => 'nullable|boolean',
+            'feishu_app_id' => 'nullable|string|max:100',
+            'feishu_app_secret' => 'nullable|string|max:100',
+            'feishu_approval_code' => 'nullable|string|max:100',
+            
+            // IM通知渠道
+            'im_notification_channel' => 'nullable|in:log,dingtalk,feishu',
+        ]);
+
+        $tenant->update($request->only([
+            'dingtalk_enabled', 'dingtalk_corp_id', 'dingtalk_app_key',
+            'dingtalk_app_secret', 'dingtalk_agent_id', 'dingtalk_process_code',
+            'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_approval_code',
+            'im_notification_channel',
+        ]));
+
+        return response()->json([
+            'message' => 'IM配置更新成功',
+            'data' => [
+                'dingtalk_enabled' => $tenant->dingtalk_enabled,
+                'dingtalk_corp_id' => $tenant->dingtalk_corp_id,
+                'dingtalk_app_key' => $tenant->dingtalk_app_key,
+                'dingtalk_app_secret' => $tenant->dingtalk_app_secret,
+                'dingtalk_agent_id' => $tenant->dingtalk_agent_id,
+                'dingtalk_process_code' => $tenant->dingtalk_process_code,
+                'feishu_enabled' => $tenant->feishu_enabled,
+                'feishu_app_id' => $tenant->feishu_app_id,
+                'feishu_app_secret' => $tenant->feishu_app_secret,
+                'feishu_approval_code' => $tenant->feishu_approval_code,
+                'im_notification_channel' => $tenant->im_notification_channel,
+            ],
+        ]);
     }
 }
