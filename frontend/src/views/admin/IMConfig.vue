@@ -2,7 +2,13 @@
   <div class="admin-im-config">
     <div class="page-header">
       <h1>IM配置</h1>
-      <p>配置您租户的钉钉或飞书集成</p>
+      <p>配置您租户的钉钉、飞书或企业微信集成</p>
+    </div>
+
+    <div class="config-links">
+      <el-link href="/docs/dingtalk-config.html" target="_blank">钉钉对接配置说明</el-link>
+      <el-link href="/docs/feishu-config.html" target="_blank">飞书对接配置说明</el-link>
+      <el-link href="/docs/wework-config.html" target="_blank">企业微信对接配置说明</el-link>
     </div>
 
     <el-tabs v-model="activeTab" class="im-tabs">
@@ -60,8 +66,54 @@
               <el-form-item label="飞书应用AppSecret">
                 <el-input v-model="form.feishu_app_secret" type="password" placeholder="请输入飞书应用AppSecret" />
               </el-form-item>
+              <el-form-item label="Verification Token">
+                <el-input v-model="form.feishu_verification_token" placeholder="请输入Verification Token（事件回调验证用）" />
+              </el-form-item>
+              <el-form-item label="应用类型">
+                <el-select v-model="form.feishu_app_type" placeholder="请选择应用类型">
+                  <el-option label="企业自建应用" value="self" />
+                  <el-option label="应用商店应用" value="store" />
+                </el-select>
+              </el-form-item>
               <el-form-item label="审批定义Code">
                 <el-input v-model="form.feishu_approval_code" placeholder="请输入审批定义Code" />
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-card>
+      </el-tab-pane>
+
+      <!-- 企业微信配置 -->
+      <el-tab-pane label="企业微信" name="wework">
+        <el-card>
+          <div class="config-section">
+            <div class="config-header">
+              <h2>企业微信集成配置</h2>
+              <el-switch 
+                v-model="form.wework_enabled" 
+                active-text="启用" 
+                inactive-text="禁用"
+              />
+            </div>
+            
+            <el-form :model="form" label-width="180px" v-if="form.wework_enabled">
+              <el-form-item label="企业微信CorpId">
+                <el-input v-model="form.wework_corp_id" placeholder="请输入企业微信CorpId" />
+              </el-form-item>
+              <el-form-item label="应用Secret">
+                <el-input v-model="form.wework_secret" type="password" placeholder="请输入应用Secret" />
+              </el-form-item>
+              <el-form-item label="应用AgentId">
+                <el-input v-model="form.wework_agent_id" placeholder="请输入应用AgentId" />
+              </el-form-item>
+              <el-form-item label="回调Token">
+                <el-input v-model="form.wework_token" placeholder="请输入回调Token" />
+              </el-form-item>
+              <el-form-item label="回调EncodingAESKey">
+                <el-input v-model="form.wework_encoding_aes_key" placeholder="请输入回调EncodingAESKey" />
+              </el-form-item>
+              <el-form-item label="审批模板Code">
+                <el-input v-model="form.wework_approval_code" placeholder="请输入审批模板Code" />
               </el-form-item>
             </el-form>
           </div>
@@ -79,6 +131,7 @@
                   <el-option label="仅日志记录" value="log" />
                   <el-option label="钉钉工作消息" value="dingtalk" />
                   <el-option label="飞书机器人消息" value="feishu" />
+                  <el-option label="企业微信消息" value="wework" />
                 </el-select>
               </el-form-item>
             </el-form>
@@ -116,6 +169,13 @@ const form = reactive({
   feishu_app_id: '',
   feishu_app_secret: '',
   feishu_approval_code: '',
+  wework_enabled: false,
+  wework_corp_id: '',
+  wework_secret: '',
+  wework_agent_id: '',
+  wework_token: '',
+  wework_encoding_aes_key: '',
+  wework_approval_code: '',
   im_notification_channel: 'log'
 })
 
@@ -167,6 +227,15 @@ const saveConfig = async () => {
 
 .page-header p {
   color: #666;
+}
+
+.config-links {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f5f7fa;
+  border-radius: 8px;
 }
 
 .im-tabs {

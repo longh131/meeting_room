@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>钉钉对接配置说明</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.8; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        h1 { text-align: center; color: #1677ff; margin-bottom: 30px; font-size: 28px; }
+        h2 { color: #1677ff; margin: 30px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #1677ff; font-size: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #e8e8e8; padding: 12px 15px; text-align: left; }
+        th { background: #f0f5ff; color: #1677ff; font-weight: 600; }
+        td:first-child { font-weight: 600; width: 160px; }
+        ol { margin: 10px 0 10px 20px; }
+        li { margin: 10px 0; }
+        a { color: #1677ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .note { background: #fffbe6; border-left: 4px solid #faad14; padding: 12px 16px; margin: 15px 0; border-radius: 4px; }
+        .step-num { display: inline-block; background: #1677ff; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 8px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 钉钉对接配置说明</h1>
+
+        <h2>一、需要提供的凭证信息</h2>
+        <table>
+            <tr><th>参数</th><th>说明</th><th>获取位置</th></tr>
+            <tr><td>CorpId</td><td>企业唯一标识</td><td>钉钉管理后台 → 首页 → 企业信息</td></tr>
+            <tr><td>AppKey</td><td>应用标识</td><td>开发者后台 → 应用详情 → 应用凭证</td></tr>
+            <tr><td>AppSecret</td><td>应用密钥</td><td>开发者后台 → 应用详情 → 应用凭证</td></tr>
+            <tr><td>AgentId</td><td>应用编号</td><td>开发者后台 → 应用详情</td></tr>
+            <tr><td>审批流程Code</td><td>审批模板编码</td><td>OA审批 → 模板详情</td></tr>
+        </table>
+
+        <h2>二、操作步骤</h2>
+
+        <h3><span class="step-num">1</span> 登录钉钉开发者后台</h3>
+        <p>访问 <a href="https://open.dingtalk.com/" target="_blank">https://open.dingtalk.com/</a>，使用钉钉管理员账号扫码登录。</p>
+
+        <h3><span class="step-num">2</span> 创建企业内部应用</h3>
+        <ol>
+            <li>点击左侧菜单 <strong>应用开发</strong> → <strong>企业内部应用</strong></li>
+            <li>点击 <strong>创建应用</strong></li>
+            <li>填写应用名称（如：会议预定）、应用描述、上传图标</li>
+            <li>点击 <strong>确定创建</strong></li>
+        </ol>
+
+        <h3><span class="step-num">3</span> 获取 AppKey 和 AppSecret</h3>
+        <ol>
+            <li>在应用详情页，点击 <strong>应用凭证</strong></li>
+            <li>复制 <strong>AppKey</strong></li>
+            <li>点击 AppSecret 后的"查看"，扫码验证后复制</li>
+        </ol>
+
+        <h3><span class="step-num">4</span> 获取 CorpId</h3>
+        <p>返回钉钉管理后台首页，在页面顶部或"企业信息"中，复制 <strong>CorpId</strong>。</p>
+
+        <h3><span class="step-num">5</span> 获取 AgentId</h3>
+        <p>回到开发者后台 → 应用详情页，在 <strong>AgentId</strong> 字段处直接复制。</p>
+
+        <h3><span class="step-num">6</span> 创建审批模板并获取流程Code</h3>
+        <ol>
+            <li>钉钉管理后台 → <strong>工作台</strong> → <strong>OA审批</strong></li>
+            <li>点击 <strong>创建新模板</strong>，选择"自定义模板"</li>
+            <li>设计审批表单，保存并发布</li>
+            <li>在模板详情页，复制 <strong>processCode</strong></li>
+        </ol>
+
+        <h3><span class="step-num">7</span> 配置回调地址</h3>
+        <ol>
+            <li>开发者后台 → 应用详情 → <strong>事件与回调</strong></li>
+            <li>设置回调URL为：<code>https://您的域名/api/dingtalk/callback</code></li>
+            <li>设置回调事件：审批任务回调、通讯录变更通知</li>
+        </ol>
+
+        <h3><span class="step-num">8</span> 配置应用权限</h3>
+        <ol>
+            <li>开发者后台 → 应用详情 → <strong>权限管理</strong></li>
+            <li>申请以下权限：
+                <ul>
+                    <li>通讯录部门信息读权限</li>
+                    <li>通讯录部门成员读权限</li>
+                    <li>成员信息读权限</li>
+                    <li>OA审批实例写权限</li>
+                    <li>企业会话消息发送权限</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h3><span class="step-num">9</span> 发布应用</h3>
+        <ol>
+            <li>开发者后台 → 应用详情 → <strong>版本管理与发布</strong></li>
+            <li>点击 <strong>创建新版本</strong>，填写版本信息</li>
+            <li>点击 <strong>发布</strong>，选择可见范围（建议全公司）</li>
+        </ol>
+
+        <div class="note">
+            💡 <strong>提示：</strong>完成以上步骤后，请将获取到的 CorpId、AppKey、AppSecret、AgentId、审批流程Code 提供给系统管理员进行配置。
+        </div>
+    </div>
+</body>
+</html>

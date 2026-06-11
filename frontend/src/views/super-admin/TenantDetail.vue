@@ -99,8 +99,42 @@
               <el-form-item label="AppSecret">
                 <el-input v-model="imConfig.feishu_app_secret" placeholder="飞书应用AppSecret" type="password" />
               </el-form-item>
+              <el-form-item label="Verification Token">
+                <el-input v-model="imConfig.feishu_verification_token" placeholder="飞书Verification Token" />
+              </el-form-item>
+              <el-form-item label="应用类型">
+                <el-select v-model="imConfig.feishu_app_type" placeholder="请选择应用类型">
+                  <el-option label="企业自建应用" value="self" />
+                  <el-option label="应用商店应用" value="store" />
+                </el-select>
+              </el-form-item>
               <el-form-item label="审批定义Code">
                 <el-input v-model="imConfig.feishu_approval_code" placeholder="飞书审批定义Code" />
+              </el-form-item>
+            </el-form>
+          </el-tab-pane>
+          <el-tab-pane label="企业微信配置" name="wework">
+            <el-form :model="imConfig" label-width="150px" class="im-form">
+              <el-form-item label="启用企业微信">
+                <el-switch v-model="imConfig.wework_enabled" />
+              </el-form-item>
+              <el-form-item label="CorpId">
+                <el-input v-model="imConfig.wework_corp_id" placeholder="企业微信CorpId" />
+              </el-form-item>
+              <el-form-item label="应用Secret">
+                <el-input v-model="imConfig.wework_secret" placeholder="企业微信应用Secret" type="password" />
+              </el-form-item>
+              <el-form-item label="AgentId">
+                <el-input v-model="imConfig.wework_agent_id" placeholder="企业微信应用AgentId" />
+              </el-form-item>
+              <el-form-item label="回调Token">
+                <el-input v-model="imConfig.wework_token" placeholder="企业微信回调Token" />
+              </el-form-item>
+              <el-form-item label="EncodingAESKey">
+                <el-input v-model="imConfig.wework_encoding_aes_key" placeholder="企业微信回调EncodingAESKey" />
+              </el-form-item>
+              <el-form-item label="审批模板Code">
+                <el-input v-model="imConfig.wework_approval_code" placeholder="企业微信审批模板Code" />
               </el-form-item>
             </el-form>
           </el-tab-pane>
@@ -111,12 +145,14 @@
                   <el-option label="日志记录" value="log" />
                   <el-option label="钉钉工作消息" value="dingtalk" />
                   <el-option label="飞书机器人消息" value="feishu" />
+                  <el-option label="企业微信消息" value="wework" />
                 </el-select>
               </el-form-item>
               <el-form-item>
                 <el-alert title="回调URL说明" type="info" :closable="false">
-                  <p>审批回调URL: <code>{{ callbackUrl }}/callback/approval/dingtalk</code></p>
+                  <p>审批回调URL(钉钉): <code>{{ callbackUrl }}/callback/approval/dingtalk</code></p>
                   <p>审批回调URL(飞书): <code>{{ callbackUrl }}/callback/approval/feishu</code></p>
+                  <p>审批回调URL(企业微信): <code>{{ callbackUrl }}/callback/approval/wework</code></p>
                 </el-alert>
               </el-form-item>
             </el-form>
@@ -253,7 +289,17 @@ const imConfig = reactive({
   feishu_enabled: false,
   feishu_app_id: '',
   feishu_app_secret: '',
+  feishu_verification_token: '',
+  feishu_app_type: 'self',
   feishu_approval_code: '',
+  // 企业微信配置
+  wework_enabled: false,
+  wework_corp_id: '',
+  wework_secret: '',
+  wework_agent_id: '',
+  wework_token: '',
+  wework_encoding_aes_key: '',
+  wework_approval_code: '',
   // 通知渠道
   im_notification_channel: 'log',
 })
@@ -301,7 +347,17 @@ const fetchTenant = async () => {
     imConfig.feishu_enabled = t.feishu_enabled || false
     imConfig.feishu_app_id = t.feishu_app_id || ''
     imConfig.feishu_app_secret = t.feishu_app_secret || ''
+    imConfig.feishu_verification_token = t.feishu_verification_token || ''
+    imConfig.feishu_app_type = t.feishu_app_type || 'self'
     imConfig.feishu_approval_code = t.feishu_approval_code || ''
+    
+    imConfig.wework_enabled = t.wework_enabled || false
+    imConfig.wework_corp_id = t.wework_corp_id || ''
+    imConfig.wework_secret = t.wework_secret || ''
+    imConfig.wework_agent_id = t.wework_agent_id || ''
+    imConfig.wework_token = t.wework_token || ''
+    imConfig.wework_encoding_aes_key = t.wework_encoding_aes_key || ''
+    imConfig.wework_approval_code = t.wework_approval_code || ''
     
     imConfig.im_notification_channel = t.im_notification_channel || 'log'
   } catch (error) {

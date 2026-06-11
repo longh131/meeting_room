@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业微信对接配置说明</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.8; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        h1 { text-align: center; color: #07c160; margin-bottom: 30px; font-size: 28px; }
+        h2 { color: #07c160; margin: 30px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #07c160; font-size: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #e8e8e8; padding: 12px 15px; text-align: left; }
+        th { background: #f0fff4; color: #07c160; font-weight: 600; }
+        td:first-child { font-weight: 600; width: 220px; }
+        ol { margin: 10px 0 10px 20px; }
+        li { margin: 10px 0; }
+        a { color: #07c160; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .note { background: #fffbe6; border-left: 4px solid #faad14; padding: 12px 16px; margin: 15px 0; border-radius: 4px; }
+        .step-num { display: inline-block; background: #07c160; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 8px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 企业微信对接配置说明</h1>
+
+        <h2>一、需要提供的凭证信息</h2>
+        <table>
+            <tr><th>参数</th><th>说明</th><th>获取位置</th></tr>
+            <tr><td>CorpId</td><td>企业ID</td><td>管理后台 → 我的企业 → 企业信息</td></tr>
+            <tr><td>Secret</td><td>应用密钥</td><td>管理后台 → 应用管理 → 应用详情</td></tr>
+            <tr><td>AgentId</td><td>应用编号</td><td>管理后台 → 应用管理 → 应用详情</td></tr>
+            <tr><td>Token</td><td>回调Token</td><td>应用详情 → 接收消息 → 设置接收消息</td></tr>
+            <tr><td>EncodingAESKey</td><td>加密密钥</td><td>应用详情 → 接收消息 → 设置接收消息</td></tr>
+            <tr><td>审批模板Code</td><td>审批模板编码</td><td>审批应用 → 模板详情</td></tr>
+        </table>
+
+        <h2>二、操作步骤</h2>
+
+        <h3><span class="step-num">1</span> 登录企业微信管理后台</h3>
+        <p>访问 <a href="https://work.weixin.qq.com/" target="_blank">https://work.weixin.qq.com/</a>，使用企业微信管理员账号扫码登录。</p>
+
+        <h3><span class="step-num">2</span> 获取 CorpId</h3>
+        <ol>
+            <li>点击 <strong>我的企业</strong></li>
+            <li>在 <strong>企业信息</strong> 底部，复制 <strong>CorpId</strong></li>
+        </ol>
+
+        <h3><span class="step-num">3</span> 创建自建应用</h3>
+        <ol>
+            <li>点击 <strong>应用管理</strong> → <strong>自建</strong></li>
+            <li>点击 <strong>创建应用</strong></li>
+            <li>填写应用名称（如：会议预定）、上传图标、选择可见范围</li>
+            <li>点击 <strong>创建应用</strong></li>
+        </ol>
+
+        <h3><span class="step-num">4</span> 获取 AgentId 和 Secret</h3>
+        <ol>
+            <li>进入应用详情页</li>
+            <li>复制 <strong>AgentId</strong></li>
+            <li>在 Secret 处点击"查看"，扫码后复制</li>
+        </ol>
+
+        <h3><span class="step-num">5</span> 配置接收消息回调（获取 Token 和 EncodingAESKey）</h3>
+        <ol>
+            <li>应用详情页 → <strong>接收消息</strong> → <strong>设置接收消息</strong></li>
+            <li>设置URL为：<code>https://您的域名/api/wework/callback</code></li>
+            <li>随机生成 <strong>Token</strong> 和 <strong>EncodingAESKey</strong>（系统可自动生成）</li>
+            <li>记录下 Token 和 EncodingAESKey</li>
+            <li>点击保存</li>
+        </ol>
+
+        <h3><span class="step-num">6</span> 创建审批模板并获取审批模板Code</h3>
+        <ol>
+            <li>管理后台 → <strong>应用管理</strong> → <strong>审批</strong></li>
+            <li>点击 <strong>创建模板</strong>，设计审批表单</li>
+            <li>保存并发布</li>
+            <li>在模板详情页，复制 <strong>审批模板Code</strong></li>
+        </ol>
+
+        <h3><span class="step-num">7</span> 配置应用权限</h3>
+        <ol>
+            <li>应用详情页 → <strong>企业可信IP</strong> → 添加服务器IP</li>
+            <li><strong>可见范围</strong> → 设置为需要使用的部门或全公司</li>
+        </ol>
+
+        <h3><span class="step-num">8</span> 配置网页授权</h3>
+        <ol>
+            <li>应用详情页 → <strong>网页授权及JS-SDK</strong></li>
+            <li>设置可信域名为：<code>https://您的域名</code></li>
+        </ol>
+
+        <div class="note">
+            💡 <strong>提示：</strong>完成以上步骤后，请将获取到的 CorpId、Secret、AgentId、Token、EncodingAESKey、审批模板Code 提供给系统管理员进行配置。
+        </div>
+    </div>
+</body>
+</html>

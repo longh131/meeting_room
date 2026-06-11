@@ -102,6 +102,22 @@
         <el-form-item label="订阅到期" prop="subscription_until">
           <el-date-picker v-model="tenantForm.subscription_until" type="date" />
         </el-form-item>
+        
+        <el-divider />
+        
+        <!-- 管理员账号设置 -->
+        <el-form-item label="管理员邮箱" prop="admin_email">
+          <el-input v-model="tenantForm.admin_email" placeholder="请输入管理员邮箱（用于登录）" />
+        </el-form-item>
+        <el-form-item label="管理员密码" prop="admin_password">
+          <el-input type="password" v-model="tenantForm.admin_password" :placeholder="isEditing ? '不修改密码请留空（至少6位）' : '请输入管理员密码（至少6位）'" />
+        </el-form-item>
+        <el-form-item label="管理员姓名" prop="admin_name">
+          <el-input v-model="tenantForm.admin_name" placeholder="请输入管理员姓名" />
+        </el-form-item>
+        <el-form-item label="管理员电话" prop="admin_phone">
+          <el-input v-model="tenantForm.admin_phone" placeholder="请输入管理员电话" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showCreateModal = false">取消</el-button>
@@ -165,6 +181,11 @@ const tenantForm = reactive({
   contact_phone: '',
   contact_email: '',
   subscription_until: '',
+  // 管理员账号
+  admin_email: '',
+  admin_password: '',
+  admin_name: '',
+  admin_phone: '',
 })
 
 const renewForm = reactive({
@@ -203,7 +224,7 @@ const viewTenant = (id) => {
   router.push(`/super-admin/tenants/${id}`)
 }
 
-const editTenant = (tenant) => {
+const editTenant = async (tenant) => {
   isEditing.value = true
   tenantForm.id = tenant.id
   tenantForm.name = tenant.name
@@ -212,6 +233,29 @@ const editTenant = (tenant) => {
   tenantForm.contact_phone = tenant.contact_phone
   tenantForm.contact_email = tenant.contact_email
   tenantForm.subscription_until = tenant.subscription_until
+  
+  // 获取租户管理员信息
+  try {
+    const response = await axios.get(`/admin/tenants/${tenant.id}`)
+    if (response.admin) {
+      tenantForm.admin_email = response.admin.email
+      tenantForm.admin_name = response.admin.name
+      tenantForm.admin_phone = response.admin.phone
+      tenantForm.admin_password = '' // 密码不显示
+    } else {
+      tenantForm.admin_email = ''
+      tenantForm.admin_name = ''
+      tenantForm.admin_phone = ''
+      tenantForm.admin_password = ''
+    }
+  } catch (error) {
+    console.error('Failed to fetch tenant admin:', error)
+    tenantForm.admin_email = ''
+    tenantForm.admin_name = ''
+    tenantForm.admin_phone = ''
+    tenantForm.admin_password = ''
+  }
+  
   showCreateModal.value = true
 }
 
@@ -249,6 +293,11 @@ const resetForm = () => {
   tenantForm.contact_phone = ''
   tenantForm.contact_email = ''
   tenantForm.subscription_until = ''
+  // 重置管理员字段
+  tenantForm.admin_email = ''
+  tenantForm.admin_password = ''
+  tenantForm.admin_name = ''
+  tenantForm.admin_phone = ''
   isEditing.value = false
 }
 

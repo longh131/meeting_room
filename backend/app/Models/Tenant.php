@@ -17,7 +17,10 @@ class Tenant extends Model
         'dingtalk_enabled', 'dingtalk_app_key', 'dingtalk_app_secret',
         'dingtalk_corp_id', 'dingtalk_agent_id', 'dingtalk_process_code',
         // 飞书配置
-        'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_approval_code',
+        'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_verification_token', 'feishu_app_type', 'feishu_approval_code',
+        // 企业微信配置
+        'wework_enabled', 'wework_corp_id', 'wework_secret',
+        'wework_agent_id', 'wework_token', 'wework_encoding_aes_key', 'wework_approval_code',
         // IM通知渠道
         'im_notification_channel',
     ];
@@ -27,6 +30,7 @@ class Tenant extends Model
         'status' => 'boolean',
         'dingtalk_enabled' => 'boolean',
         'feishu_enabled' => 'boolean',
+        'wework_enabled' => 'boolean',
     ];
 
     public function users()
