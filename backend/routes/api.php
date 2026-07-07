@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // 审批回调路由（不需要认证，由IM平台验证，需要携带tenant_id）
 Route::post('/callback/approval/dingtalk', [ApprovalCallbackController::class, 'dingtalkCallback']);
 Route::post('/callback/approval/feishu', [ApprovalCallbackController::class, 'feishuCallback']);
+Route::post('/callback/approval/wework', [ApprovalCallbackController::class, 'weworkCallback']);
 Route::get('/callback/verify', [ApprovalCallbackController::class, 'verify']);
 
 Route::get('/pad/{id}', [MeetingRoomController::class, 'padDisplay']);

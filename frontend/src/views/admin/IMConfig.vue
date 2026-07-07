@@ -168,6 +168,8 @@ const form = reactive({
   feishu_enabled: false,
   feishu_app_id: '',
   feishu_app_secret: '',
+  feishu_verification_token: '',
+  feishu_app_type: 'self',
   feishu_approval_code: '',
   wework_enabled: false,
   wework_corp_id: '',

@@ -95,6 +95,45 @@ class ApprovalCallbackController extends Controller
     }
 
     /**
+     * 企业微信审批回调
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function weworkCallback(Request $request)
+    {
+        try {
+            $data = $request->all();
+            $tenantId = $request->input('tenant_id');
+
+            Log::info('[Wework Callback] 租户' . $tenantId . '收到审批回调: ' . json_encode($data));
+
+            if (!$tenantId) {
+                Log::error('[Wework Callback] 缺少租户ID');
+                return response()->json(['errcode' => -1, 'errmsg' => '缺少租户ID'], 400);
+            }
+
+            $tenant = Tenant::find($tenantId);
+            if (!$tenant || !$tenant->wework_enabled) {
+                Log::error('[Wework Callback] 租户不存在或未启用企业微信: ' . $tenantId);
+                return response()->json(['errcode' => -1, 'errmsg' => '租户未启用企业微信'], 400);
+            }
+
+            $imService = IMServiceFactory::createWeworkService($tenantId);
+            $result = $imService->handleApprovalCallback($data);
+
+            if ($result['success']) {
+                $this->updateReservationStatus($result['process_instance_id'], $result['status'], $tenantId);
+            }
+
+            return response()->json(['errcode' => 0, 'errmsg' => 'ok']);
+        } catch (\Exception $e) {
+            Log::error('[Wework Callback] 处理失败: ' . $e->getMessage());
+            return response()->json(['errcode' => -1, 'errmsg' => '处理失败'], 500);
+        }
+    }
+
+    /**
      * 更新预定状态
      *
      * @param string $processInstanceId

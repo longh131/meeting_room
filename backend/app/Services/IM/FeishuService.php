@@ -63,7 +63,12 @@ class FeishuService implements IMService
         }
 
         try {
-            $response = Http::post('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', [
+            // 根据应用类型选择不同的 token 接口
+            $endpoint = $this->tenant->feishu_app_type === 'store' 
+                ? 'https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal'
+                : 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+
+            $response = Http::post($endpoint, [
                 'app_id' => $this->tenant->feishu_app_id,
                 'app_secret' => $this->tenant->feishu_app_secret,
             ]);
@@ -71,15 +76,16 @@ class FeishuService implements IMService
             $result = $response->json();
 
             if ($result['code'] != 0) {
-                Log::error('[Feishu] 租户' . $this->tenantId . '获取tenant_access_token失败: ' . $result['msg']);
-                throw new \Exception('获取飞书tenant_access_token失败: ' . $result['msg']);
+                Log::error('[Feishu] 租户' . $this->tenantId . '获取access_token失败');
+                throw new \Exception('获取飞书access_token失败: ' . $result['msg']);
             }
 
-            $this->accessToken = $result['tenant_access_token'];
+            $tokenKey = $this->tenant->feishu_app_type === 'store' ? 'app_access_token' : 'tenant_access_token';
+            $this->accessToken = $result[$tokenKey];
             $this->tokenExpiresAt = time() + $result['expire'] - 60;
             return $this->accessToken;
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . '获取tenant_access_token异常: ' . $e->getMessage());
+            Log::error('[Feishu] 租户' . $this->tenantId . '获取access_token异常');
             throw $e;
         }
     }
@@ -102,20 +108,19 @@ class FeishuService implements IMService
             $tokenResult = $tokenResponse->json();
 
             if ($tokenResult['code'] != 0) {
-                Log::error('[Feishu] 租户' . $this->tenantId . '获取用户access_token失败: ' . $tokenResult['msg']);
+                Log::error('[Feishu] 租户' . $this->tenantId . '获取用户access_token失败');
                 throw new \Exception('获取用户access_token失败: ' . $tokenResult['msg']);
             }
 
             $userAccessToken = $tokenResult['data']['access_token'];
 
-            $userResponse = Http::get('https://open.feishu.cn/open-apis/authen/v1/user_info', [
-                'headers' => ['Authorization' => 'Bearer ' . $userAccessToken],
-            ]);
+            $userResponse = Http::withHeaders(['Authorization' => 'Bearer ' . $userAccessToken])
+                ->get('https://open.feishu.cn/open-apis/authen/v1/user_info');
 
             $userResult = $userResponse->json();
 
             if ($userResult['code'] != 0) {
-                Log::error('[Feishu] 租户' . $this->tenantId . '获取用户信息失败: ' . $userResult['msg']);
+                Log::error('[Feishu] 租户' . $this->tenantId . '获取用户信息失败');
                 throw new \Exception('获取用户信息失败: ' . $userResult['msg']);
             }
 
@@ -131,7 +136,7 @@ class FeishuService implements IMService
                 'avatar' => $userInfo['avatar_url'] ?? '',
             ];
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . 'getUserByAuthCode异常: ' . $e->getMessage());
+            Log::error('[Feishu] 租户' . $this->tenantId . 'getUserByAuthCode异常');
             throw $e;
         }
     }
@@ -142,20 +147,19 @@ class FeishuService implements IMService
     public function getUserInfo(string $userId): array
     {
         try {
-            $response = Http::get('https://open.feishu.cn/open-apis/contact/v3/users/' . $userId, [
-                'headers' => ['Authorization' => 'Bearer ' . $this->getAccessToken()],
-            ]);
+            $response = Http::withHeaders(['Authorization' => 'Bearer ' . $this->getAccessToken()])
+                ->get('https://open.feishu.cn/open-apis/contact/v3/users/' . $userId);
 
             $result = $response->json();
 
             if ($result['code'] != 0) {
-                Log::error('[Feishu] 租户' . $this->tenantId . '获取用户详情失败: ' . $result['msg']);
+                Log::error('[Feishu] 租户' . $this->tenantId . '获取用户详情失败');
                 return [];
             }
 
             return $result['data'] ?? [];
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . 'getUserInfo异常: ' . $e->getMessage());
+            Log::error('[Feishu] 租户' . $this->tenantId . 'getUserInfo异常');
             return [];
         }
     }
@@ -175,7 +179,7 @@ class FeishuService implements IMService
             Log::info('[Feishu] 租户' . $this->tenantId . '同步组织架构完成，获取到 ' . count($departments) . ' 个部门');
             return true;
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . '同步组织架构失败: ' . $e->getMessage());
+            Log::error('[Feishu] 租户' . $this->tenantId . '同步组织架构失败');
             return false;
         }
     }
@@ -186,15 +190,15 @@ class FeishuService implements IMService
     public function getDepartments(bool $withUsers = false): array
     {
         try {
-            $response = Http::get('https://open.feishu.cn/open-apis/contact/v3/departments', [
-                'headers' => ['Authorization' => 'Bearer ' . $this->getAccessToken()],
-                'query' => ['page_size' => 100],
-            ]);
+            $response = Http::withHeaders(['Authorization' => 'Bearer ' . $this->getAccessToken()])
+                ->get('https://open.feishu.cn/open-apis/contact/v3/departments', [
+                    'page_size' => 100,
+                ]);
 
             $result = $response->json();
 
             if ($result['code'] != 0) {
-                Log::error('[Feishu] 租户' . $this->tenantId . '获取部门列表失败: ' . $result['msg']);
+                Log::error('[Feishu] 租户' . $this->tenantId . '获取部门列表失败');
                 return [];
             }
 
@@ -217,7 +221,7 @@ class FeishuService implements IMService
 
             return $departments;
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . 'getDepartments异常: ' . $e->getMessage());
+            Log::error('[Feishu] 租户' . $this->tenantId . 'getDepartments异常');
             return [];
         }
     }
@@ -228,24 +232,22 @@ class FeishuService implements IMService
     protected function getUsersByDepartment(string $departmentId): array
     {
         try {
-            $response = Http::get('https://open.feishu.cn/open-apis/contact/v3/users', [
-                'headers' => ['Authorization' => 'Bearer ' . $this->getAccessToken()],
-                'query' => [
+            $response = Http::withHeaders(['Authorization' => 'Bearer ' . $this->getAccessToken()])
+                ->get('https://open.feishu.cn/open-apis/contact/v3/users', [
                     'department_id' => $departmentId,
                     'page_size' => 100,
-                ],
-            ]);
+                ]);
 
             $result = $response->json();
 
             if ($result['code'] != 0) {
-                Log::error('[Feishu] 租户' . $this->tenantId . '获取部门用户失败: ' . $result['msg']);
+                Log::error('[Feishu] 租户' . $this->tenantId . '获取部门用户失败');
                 return [];
             }
 
             return $result['data']['items'] ?? [];
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . 'getUsersByDepartment异常: ' . $e->getMessage());
+            Log::error('[Feishu] 租户' . $this->tenantId . 'getUsersByDepartment异常');
             return [];
         }
     }
@@ -274,16 +276,13 @@ class FeishuService implements IMService
                 'form' => ['fields' => $formFields],
             ];
 
-            $response = Http::post(
-                'https://open.feishu.cn/open-apis/approval/v4/instances/create',
-                $data,
-                ['headers' => ['Authorization' => 'Bearer ' . $this->getAccessToken()]]
-            );
+            $response = Http::withHeaders(['Authorization' => 'Bearer ' . $this->getAccessToken()])
+                ->post('https://open.feishu.cn/open-apis/approval/v4/instances/create', $data);
 
             $result = $response->json();
 
             if ($result['code'] != 0) {
-                Log::error('[Feishu] 租户' . $this->tenantId . '发起审批失败: ' . $result['msg']);
+                Log::error('[Feishu] 租户' . $this->tenantId . '发起审批失败');
                 throw new \Exception('发起审批失败: ' . $result['msg']);
             }
 
@@ -293,7 +292,7 @@ class FeishuService implements IMService
                 'message' => '审批已发起',
             ];
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . 'sendApproval异常: ' . $e->getMessage());
+            Log::error('[Feishu] 租户' . $this->tenantId . 'sendApproval异常');
             throw $e;
         }
     }
@@ -304,6 +303,14 @@ class FeishuService implements IMService
     public function handleApprovalCallback(array $data): array
     {
         try {
+            // 验证 Verification Token
+            $receivedToken = $data['token'] ?? '';
+            if (!empty($this->tenant->feishu_verification_token) && 
+                $receivedToken !== $this->tenant->feishu_verification_token) {
+                Log::error('[Feishu] 租户' . $this->tenantId . '回调验证失败: Token不匹配');
+                return ['success' => false, 'message' => 'Token验证失败'];
+            }
+
             $instanceCode = $data['instance_code'] ?? '';
             $status = $data['status'] ?? '';
 
@@ -320,8 +327,8 @@ class FeishuService implements IMService
                 'status' => $statusMap[$status] ?? 'unknown',
             ];
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . 'handleApprovalCallback异常: ' . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
+            Log::error('[Feishu] 租户' . $this->tenantId . 'handleApprovalCallback异常');
+            return ['success' => false, 'message' => '处理回调异常'];
         }
     }
 
@@ -342,22 +349,19 @@ class FeishuService implements IMService
                 'content' => json_encode([$type => ['text' => $message]]),
             ];
 
-            $response = Http::post(
-                'https://open.feishu.cn/open-apis/message/v4/send',
-                $data,
-                ['headers' => ['Authorization' => 'Bearer ' . $this->getAccessToken()]]
-            );
+            $response = Http::withHeaders(['Authorization' => 'Bearer ' . $this->getAccessToken()])
+                ->post('https://open.feishu.cn/open-apis/message/v4/send', $data);
 
             $result = $response->json();
 
             if ($result['code'] != 0) {
-                Log::error('[Feishu] 租户' . $this->tenantId . '发送消息失败: ' . $result['msg']);
+                Log::error('[Feishu] 租户' . $this->tenantId . '发送消息失败');
                 return false;
             }
 
             return true;
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . 'sendNotification异常: ' . $e->getMessage());
+            Log::error('[Feishu] 租户' . $this->tenantId . 'sendNotification异常');
             return false;
         }
     }
@@ -372,14 +376,13 @@ class FeishuService implements IMService
         }
 
         try {
-            $ticketResponse = Http::get('https://open.feishu.cn/open-apis/jssdk/ticket/get', [
-                'headers' => ['Authorization' => 'Bearer ' . $this->getAccessToken()],
-            ]);
+            $ticketResponse = Http::withHeaders(['Authorization' => 'Bearer ' . $this->getAccessToken()])
+                ->get('https://open.feishu.cn/open-apis/jssdk/ticket/get');
 
             $ticketResult = $ticketResponse->json();
 
             if ($ticketResult['code'] != 0) {
-                Log::error('[Feishu] 租户' . $this->tenantId . '获取jsapi_ticket失败: ' . $ticketResult['msg']);
+                Log::error('[Feishu] 租户' . $this->tenantId . '获取jsapi_ticket失败');
                 return [];
             }
 
@@ -397,7 +400,7 @@ class FeishuService implements IMService
                 'ticket' => $ticket,
             ];
         } catch (\Exception $e) {
-            Log::error('[Feishu] 租户' . $this->tenantId . 'getJsApiConfig异常: ' . $e->getMessage());
+            Log::error('[Feishu] 租户' . $this->tenantId . 'getJsApiConfig异常');
             return [];
         }
     }

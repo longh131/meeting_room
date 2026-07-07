@@ -10,6 +10,7 @@
         .container { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
         h1 { text-align: center; color: #1677ff; margin-bottom: 30px; font-size: 28px; }
         h2 { color: #1677ff; margin: 30px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #1677ff; font-size: 20px; }
+        h3 { color: #333; margin: 20px 0 10px; font-size: 16px; }
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { border: 1px solid #e8e8e8; padding: 12px 15px; text-align: left; }
         th { background: #f0f5ff; color: #1677ff; font-weight: 600; }
@@ -19,24 +20,38 @@
         a { color: #1677ff; text-decoration: none; }
         a:hover { text-decoration: underline; }
         .note { background: #fffbe6; border-left: 4px solid #faad14; padding: 12px 16px; margin: 15px 0; border-radius: 4px; }
+        .tip { background: #f0f5ff; border-left: 4px solid #1677ff; padding: 12px 16px; margin: 15px 0; border-radius: 4px; }
         .step-num { display: inline-block; background: #1677ff; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 8px; font-size: 14px; }
+        code { background: #f5f5f5; padding: 2px 8px; border-radius: 4px; font-size: 14px; word-break: break-all; }
+        strong { color: #333; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📋 钉钉对接配置说明</h1>
 
-        <h2>一、需要提供的凭证信息</h2>
+        <div class="tip">
+            💡 <strong>重要提示：</strong>本配置需要用到两个后台，请使用<strong>同一个钉钉管理员账号</strong>登录操作。
+        </div>
+
+        <h2>一、两个后台地址</h2>
         <table>
-            <tr><th>参数</th><th>说明</th><th>获取位置</th></tr>
-            <tr><td>CorpId</td><td>企业唯一标识</td><td>钉钉管理后台 → 首页 → 企业信息</td></tr>
-            <tr><td>AppKey</td><td>应用标识</td><td>开发者后台 → 应用详情 → 应用凭证</td></tr>
-            <tr><td>AppSecret</td><td>应用密钥</td><td>开发者后台 → 应用详情 → 应用凭证</td></tr>
-            <tr><td>AgentId</td><td>应用编号</td><td>开发者后台 → 应用详情</td></tr>
-            <tr><td>审批流程Code</td><td>审批模板编码</td><td>OA审批 → 模板详情</td></tr>
+            <tr><th>后台名称</th><th>地址</th><th>用途</th></tr>
+            <tr><td><strong>钉钉开发者后台</strong></td><td><a href="https://open.dingtalk.com/" target="_blank">https://open.dingtalk.com/</a></td><td>创建应用、获取凭证、配置权限和回调</td></tr>
+            <tr><td><strong>钉钉管理后台</strong></td><td><a href="https://oa.dingtalk.com/" target="_blank">https://oa.dingtalk.com/</a></td><td>管理企业信息、OA审批、发布应用</td></tr>
         </table>
 
-        <h2>二、操作步骤</h2>
+        <h2>二、需要提供的凭证信息</h2>
+        <table>
+            <tr><th>参数</th><th>说明</th><th>获取位置</th></tr>
+            <tr><td>CorpId</td><td>企业唯一标识</td><td><a href="https://oa.dingtalk.com/" target="_blank">管理后台</a> → 首页 → 企业信息</td></tr>
+            <tr><td>AppKey</td><td>应用标识</td><td><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → 应用凭证</td></tr>
+            <tr><td>AppSecret</td><td>应用密钥</td><td><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → 应用凭证</td></tr>
+            <tr><td>AgentId</td><td>应用编号</td><td><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情</td></tr>
+            <tr><td>审批流程Code</td><td>审批模板编码</td><td><a href="https://oa.dingtalk.com/" target="_blank">管理后台</a> → 工作台 → OA审批 → 模板详情</td></tr>
+        </table>
+
+        <h2>三、操作步骤</h2>
 
         <h3><span class="step-num">1</span> 登录钉钉开发者后台</h3>
         <p>访问 <a href="https://open.dingtalk.com/" target="_blank">https://open.dingtalk.com/</a>，使用钉钉管理员账号扫码登录。</p>
@@ -45,7 +60,7 @@
         <ol>
             <li>点击左侧菜单 <strong>应用开发</strong> → <strong>企业内部应用</strong></li>
             <li>点击 <strong>创建应用</strong></li>
-            <li>填写应用名称（如：会议预定）、应用描述、上传图标</li>
+            <li>填写信息：<strong>应用名称</strong>（如：会议预定）、<strong>应用描述</strong>、<strong>上传图标</strong></li>
             <li>点击 <strong>确定创建</strong></li>
         </ol>
 
@@ -53,53 +68,57 @@
         <ol>
             <li>在应用详情页，点击 <strong>应用凭证</strong></li>
             <li>复制 <strong>AppKey</strong></li>
-            <li>点击 AppSecret 后的"查看"，扫码验证后复制</li>
+            <li>点击 AppSecret 后的 <strong>"查看"</strong>，扫码验证后复制</li>
         </ol>
 
         <h3><span class="step-num">4</span> 获取 CorpId</h3>
-        <p>返回钉钉管理后台首页，在页面顶部或"企业信息"中，复制 <strong>CorpId</strong>。</p>
+        <p>访问 <a href="https://oa.dingtalk.com/" target="_blank">https://oa.dingtalk.com/</a>（管理后台），在页面顶部或 <strong>企业信息</strong> 中，复制 <strong>CorpId</strong>。</p>
 
         <h3><span class="step-num">5</span> 获取 AgentId</h3>
-        <p>回到开发者后台 → 应用详情页，在 <strong>AgentId</strong> 字段处直接复制。</p>
+        <p>回到 <a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情页，在 <strong>AgentId</strong> 字段处直接复制。</p>
 
         <h3><span class="step-num">6</span> 创建审批模板并获取流程Code</h3>
         <ol>
-            <li>钉钉管理后台 → <strong>工作台</strong> → <strong>OA审批</strong></li>
-            <li>点击 <strong>创建新模板</strong>，选择"自定义模板"</li>
-            <li>设计审批表单，保存并发布</li>
-            <li>在模板详情页，复制 <strong>processCode</strong></li>
+            <li>访问 <a href="https://oa.dingtalk.com/" target="_blank">https://oa.dingtalk.com/</a>（管理后台）</li>
+            <li>点击 <strong>工作台</strong> → <strong>OA审批</strong></li>
+            <li>点击 <strong>创建新模板</strong>，选择 <strong>"自定义模板"</strong></li>
+            <li>设计审批表单（可参考下方建议字段），保存并发布</li>
+            <li>进入模板详情页，查看浏览器地址栏 URL，复制 <code>processCode=</code> 后面的值</li>
         </ol>
+        <div class="note">
+            📌 <strong>获取 processCode 技巧：</strong>如果详情页没有直接显示，看浏览器地址栏 URL，格式为 <code>...?processCode=PROC-XXXXX</code>，复制 <code>PROC-XXXXX</code> 部分即可。
+        </div>
 
         <h3><span class="step-num">7</span> 配置回调地址</h3>
         <ol>
-            <li>开发者后台 → 应用详情 → <strong>事件与回调</strong></li>
-            <li>设置回调URL为：<code>https://您的域名/api/dingtalk/callback</code></li>
-            <li>设置回调事件：审批任务回调、通讯录变更通知</li>
+            <li>回到 <a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → <strong>事件与回调</strong></li>
+            <li>设置回调URL为：<code>https://meeting.sisuu.com/api/dingtalk/callback</code></li>
+            <li>设置回调事件：<strong>审批任务回调</strong>、<strong>通讯录变更通知</strong></li>
         </ol>
 
         <h3><span class="step-num">8</span> 配置应用权限</h3>
         <ol>
-            <li>开发者后台 → 应用详情 → <strong>权限管理</strong></li>
-            <li>申请以下权限：
+            <li><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → <strong>权限管理</strong></li>
+            <li>搜索并申请以下权限：
                 <ul>
-                    <li>通讯录部门信息读权限</li>
-                    <li>通讯录部门成员读权限</li>
-                    <li>成员信息读权限</li>
-                    <li>OA审批实例写权限</li>
-                    <li>企业会话消息发送权限</li>
+                    <li><strong>通讯录部门信息读权限</strong></li>
+                    <li><strong>通讯录部门成员读权限</strong></li>
+                    <li><strong>成员信息读权限</strong></li>
+                    <li><strong>OA审批实例写权限</strong></li>
+                    <li><strong>企业会话消息发送权限</strong></li>
                 </ul>
             </li>
         </ol>
 
         <h3><span class="step-num">9</span> 发布应用</h3>
         <ol>
-            <li>开发者后台 → 应用详情 → <strong>版本管理与发布</strong></li>
+            <li><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → <strong>版本管理与发布</strong></li>
             <li>点击 <strong>创建新版本</strong>，填写版本信息</li>
-            <li>点击 <strong>发布</strong>，选择可见范围（建议全公司）</li>
+            <li>点击 <strong>发布</strong>，选择可见范围（建议<strong>全公司</strong>）</li>
         </ol>
 
         <div class="note">
-            💡 <strong>提示：</strong>完成以上步骤后，请将获取到的 CorpId、AppKey、AppSecret、AgentId、审批流程Code 提供给系统管理员进行配置。
+            ✅ <strong>完成后：</strong>请将获取到的 <strong>CorpId、AppKey、AppSecret、AgentId、审批流程Code</strong> 提供给系统管理员进行配置。
         </div>
     </div>
 </body>

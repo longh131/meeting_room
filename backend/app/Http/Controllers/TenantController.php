@@ -83,6 +83,8 @@ class TenantController extends Controller
             'feishu_enabled' => 'nullable|boolean',
             'feishu_app_id' => 'nullable|string|max:100',
             'feishu_app_secret' => 'nullable|string|max:100',
+            'feishu_verification_token' => 'nullable|string|max:255',
+            'feishu_app_type' => 'nullable|in:self,store',
             'feishu_approval_code' => 'nullable|string|max:100',
             
             // 企业微信配置
@@ -117,6 +119,8 @@ class TenantController extends Controller
             'feishu_enabled' => $request->feishu_enabled ?? false,
             'feishu_app_id' => $request->feishu_app_id,
             'feishu_app_secret' => $request->feishu_app_secret,
+            'feishu_verification_token' => $request->feishu_verification_token,
+            'feishu_app_type' => $request->feishu_app_type ?? 'self',
             'feishu_approval_code' => $request->feishu_approval_code,
             // 企业微信配置
             'wework_enabled' => $request->wework_enabled ?? false,
@@ -180,6 +184,8 @@ class TenantController extends Controller
             'feishu_enabled' => 'nullable|boolean',
             'feishu_app_id' => 'nullable|string|max:100',
             'feishu_app_secret' => 'nullable|string|max:100',
+            'feishu_verification_token' => 'nullable|string|max:255',
+            'feishu_app_type' => 'nullable|in:self,store',
             'feishu_approval_code' => 'nullable|string|max:100',
             
             // 企业微信配置
@@ -202,7 +208,7 @@ class TenantController extends Controller
             'dingtalk_enabled', 'dingtalk_app_key', 'dingtalk_app_secret',
             'dingtalk_corp_id', 'dingtalk_agent_id', 'dingtalk_process_code',
             // 飞书配置
-            'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_approval_code',
+            'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_verification_token', 'feishu_app_type', 'feishu_approval_code',
             // 企业微信配置
             'wework_enabled', 'wework_corp_id', 'wework_secret',
             'wework_agent_id', 'wework_token', 'wework_encoding_aes_key', 'wework_approval_code',
@@ -359,6 +365,8 @@ class TenantController extends Controller
             'feishu_enabled' => $tenant->feishu_enabled,
             'feishu_app_id' => $tenant->feishu_app_id,
             'feishu_app_secret' => $tenant->feishu_app_secret,
+            'feishu_verification_token' => $tenant->feishu_verification_token,
+            'feishu_app_type' => $tenant->feishu_app_type,
             'feishu_approval_code' => $tenant->feishu_approval_code,
             'wework_enabled' => $tenant->wework_enabled,
             'wework_corp_id' => $tenant->wework_corp_id,
@@ -397,6 +405,8 @@ class TenantController extends Controller
             'feishu_enabled' => 'nullable|boolean',
             'feishu_app_id' => 'nullable|string|max:100',
             'feishu_app_secret' => 'nullable|string|max:100',
+            'feishu_verification_token' => 'nullable|string|max:255',
+            'feishu_app_type' => 'nullable|in:self,store',
             'feishu_approval_code' => 'nullable|string|max:100',
             
             // 企业微信配置
@@ -415,7 +425,7 @@ class TenantController extends Controller
         $tenant->update($request->only([
             'dingtalk_enabled', 'dingtalk_corp_id', 'dingtalk_app_key',
             'dingtalk_app_secret', 'dingtalk_agent_id', 'dingtalk_process_code',
-            'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_approval_code',
+            'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_verification_token', 'feishu_app_type', 'feishu_approval_code',
             'wework_enabled', 'wework_corp_id', 'wework_secret',
             'wework_agent_id', 'wework_token', 'wework_encoding_aes_key', 'wework_approval_code',
             'im_notification_channel',
@@ -433,6 +443,8 @@ class TenantController extends Controller
                 'feishu_enabled' => $tenant->feishu_enabled,
                 'feishu_app_id' => $tenant->feishu_app_id,
                 'feishu_app_secret' => $tenant->feishu_app_secret,
+                'feishu_verification_token' => $tenant->feishu_verification_token,
+                'feishu_app_type' => $tenant->feishu_app_type,
                 'feishu_approval_code' => $tenant->feishu_approval_code,
                 'wework_enabled' => $tenant->wework_enabled,
                 'wework_corp_id' => $tenant->wework_corp_id,

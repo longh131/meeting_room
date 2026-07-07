@@ -37,6 +37,19 @@ class IMServiceFactory
     }
 
     /**
+     * 创建企业微信服务实例（带租户配置）
+     *
+     * @param int $tenantId 租户ID
+     * @return WeworkService
+     */
+    public static function createWeworkService(int $tenantId): WeworkService
+    {
+        $service = new WeworkService();
+        $service->setTenant($tenantId);
+        return $service;
+    }
+
+    /**
      * 根据租户配置获取启用的IM服务
      *
      * @param int $tenantId 租户ID
@@ -60,6 +73,11 @@ class IMServiceFactory
             return self::createFeishuService($tenantId);
         }
 
+        // 最后返回企业微信服务（如果启用）
+        if ($tenant->wework_enabled) {
+            return self::createWeworkService($tenantId);
+        }
+
         return null;
     }
 
@@ -67,7 +85,7 @@ class IMServiceFactory
      * 根据用户来源获取对应的IM服务
      *
      * @param int $tenantId 租户ID
-     * @param string $source 用户来源（DINGTALK/FEISHU）
+     * @param string $source 用户来源（DINGTALK/FEISHU/WEWORK）
      * @return IMService|null
      */
     public static function getServiceBySource(int $tenantId, string $source): ?IMService
@@ -77,6 +95,8 @@ class IMServiceFactory
                 return self::createDingtalkService($tenantId);
             case 'FEISHU':
                 return self::createFeishuService($tenantId);
+            case 'WEWORK':
+                return self::createWeworkService($tenantId);
             default:
                 return null;
         }
@@ -86,7 +106,7 @@ class IMServiceFactory
      * 获取租户的通知渠道配置
      *
      * @param int $tenantId 租户ID
-     * @return string 通知渠道（log/dingtalk/feishu）
+     * @return string 通知渠道（log/dingtalk/feishu/wework）
      */
     public static function getNotificationChannel(int $tenantId): string
     {
@@ -97,5 +117,27 @@ class IMServiceFactory
         }
 
         return $tenant->im_notification_channel ?? 'log';
+    }
+
+    /**
+     * 根据通知渠道获取对应的IM服务
+     *
+     * @param int $tenantId 租户ID
+     * @return IMService|null
+     */
+    public static function getServiceByNotificationChannel(int $tenantId): ?IMService
+    {
+        $channel = self::getNotificationChannel($tenantId);
+        
+        switch ($channel) {
+            case 'dingtalk':
+                return self::createDingtalkService($tenantId);
+            case 'feishu':
+                return self::createFeishuService($tenantId);
+            case 'wework':
+                return self::createWeworkService($tenantId);
+            default:
+                return null;
+        }
     }
 }

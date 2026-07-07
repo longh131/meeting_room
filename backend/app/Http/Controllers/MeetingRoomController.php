@@ -259,12 +259,24 @@ class MeetingRoomController extends Controller
             $isValidAttendee = true;
         }
         
-        // 检查是否是参会人员
-        if (!$isValidAttendee && $currentReservation->attendees) {
-            foreach ($currentReservation->attendees as $attendee) {
-                if ($attendee->user_id == $user->id) {
-                    $isValidAttendee = true;
-                    break;
+        // 检查是否是参会人员（修复：attendees可能是JSON字符串）
+        if (!$isValidAttendee) {
+            $attendees = $currentReservation->attendees;
+            if (!empty($attendees)) {
+                // 尝试解析为数组
+                if (is_string($attendees)) {
+                    $attendees = json_decode($attendees, true) ?? [];
+                }
+                if (is_array($attendees)) {
+                    foreach ($attendees as $attendee) {
+                        // 兼容不同格式：可能是对象或数组
+                        $attendeeUserId = isset($attendee['user_id']) ? $attendee['user_id'] : 
+                                          (isset($attendee->user_id) ? $attendee->user_id : null);
+                        if ($attendeeUserId == $user->id) {
+                            $isValidAttendee = true;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -291,20 +303,15 @@ class MeetingRoomController extends Controller
      */
     private function getUserFromRequest()
     {
-        $token = request()->header('Authorization');
+        // 优先使用 Laravel 内置认证（安全可靠）
+        if (auth()->check()) {
+            return auth()->user();
+        }
         
-        // 尝试通过JWT token获取用户
-        if ($token && str_starts_with($token, 'Bearer ')) {
-            $jwtToken = substr($token, 7);
-            try {
-                $payload = \Firebase\JWT\JWT::decode(
-                    $jwtToken,
-                    new \Firebase\JWT\Key(config('app.key'), 'HS256')
-                );
-                return \App\Models\User::find($payload->sub);
-            } catch (\Exception $e) {
-                // JWT验证失败，继续尝试其他方式
-            }
+        // 尝试通过请求中的用户ID获取（用于内部调用）
+        $userId = request()->input('user_id');
+        if ($userId) {
+            return \App\Models\User::find($userId);
         }
         
         // 尝试通过钉钉临时授权码获取用户
@@ -330,7 +337,7 @@ class MeetingRoomController extends Controller
                     );
                 }
             } catch (\Exception $e) {
-                // 钉钉验证失败
+                // 钉钉验证失败，继续尝试其他方式
             }
         }
         
@@ -345,7 +352,7 @@ class MeetingRoomController extends Controller
                     
                     // 查找或创建用户
                     return \App\Models\User::firstOrCreate(
-                        ['feishu_open_id' => $userInfo['open_id']],
+                        ['feishu_open_id' => $userInfo['user_id']],
                         [
                             'name' => $userInfo['name'],
                             'email' => $userInfo['email'] ?? '',
@@ -357,7 +364,34 @@ class MeetingRoomController extends Controller
                     );
                 }
             } catch (\Exception $e) {
-                // 飞书验证失败
+                // 飞书验证失败，继续尝试其他方式
+            }
+        }
+        
+        // 尝试通过企业微信临时授权码获取用户
+        $weworkCode = request()->input('wework_code');
+        if ($weworkCode && request()->input('tenant_id')) {
+            try {
+                $tenant = \App\Models\Tenant::find(request()->input('tenant_id'));
+                if ($tenant && $tenant->wework_enabled) {
+                    $imService = \App\Services\IM\IMServiceFactory::createWeworkService($tenant->id);
+                    $userInfo = $imService->getUserByAuthCode($weworkCode);
+                    
+                    // 查找或创建用户
+                    return \App\Models\User::firstOrCreate(
+                        ['wework_user_id' => $userInfo['user_id']],
+                        [
+                            'name' => $userInfo['name'],
+                            'email' => $userInfo['email'] ?? '',
+                            'phone' => $userInfo['mobile'] ?? '',
+                            'tenant_id' => $tenant->id,
+                            'source' => 'WEWORK',
+                            'status' => true,
+                        ]
+                    );
+                }
+            } catch (\Exception $e) {
+                // 企业微信验证失败
             }
         }
         
