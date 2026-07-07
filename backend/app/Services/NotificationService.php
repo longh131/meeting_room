@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendNotificationJob;
 use App\Models\NotificationLog;
 use App\Models\User;
 use App\Services\IM\IMServiceFactory;
@@ -9,9 +10,17 @@ use Illuminate\Support\Facades\Log;
 
 class NotificationService
 {
+    protected TemplateService $templateService;
+
+    public function __construct(TemplateService $templateService)
+    {
+        $this->templateService = $templateService;
+    }
+
     const CHANNEL_LOG = 'log';
     const CHANNEL_DINGTALK = 'dingtalk';
     const CHANNEL_FEISHU = 'feishu';
+    const CHANNEL_WEWORK = 'wework';
     const CHANNEL_EMAIL = 'email';
 
     const TYPE_RESERVATION_CREATE = 'reservation_create';
@@ -33,6 +42,11 @@ class NotificationService
      */
     public function send($userId, $type, $content, $channel = self::CHANNEL_LOG)
     {
+        if (config('queue.default') !== 'sync') {
+            SendNotificationJob::dispatch($userId, $type, $content, $channel);
+            return true;
+        }
+
         $log = NotificationLog::create([
             'channel' => $channel,
             'user_id' => $userId,
@@ -84,6 +98,8 @@ class NotificationService
             $channel = self::CHANNEL_DINGTALK;
         } elseif ($user->source === 'FEISHU') {
             $channel = self::CHANNEL_FEISHU;
+        } elseif ($user->source === 'WEWORK') {
+            $channel = self::CHANNEL_WEWORK;
         }
 
         return $this->send($userId, $type, $content, $channel);
@@ -100,6 +116,9 @@ class NotificationService
                 break;
             case self::CHANNEL_FEISHU:
                 $this->sendFeishu($userId, $type, $content);
+                break;
+            case self::CHANNEL_WEWORK:
+                $this->sendWework($userId, $type, $content);
                 break;
             case self::CHANNEL_EMAIL:
                 $this->sendEmail($userId, $type, $content);
@@ -192,6 +211,41 @@ class NotificationService
     }
 
     /**
+     * 企业微信通知（支持多租户）
+     */
+    protected function sendWework($userId, $type, $content)
+    {
+        try {
+            $user = User::find($userId);
+            if (!$user || empty($user->wework_user_id)) {
+                Log::warning('[Wework Notification] 用户未绑定企业微信: ' . $userId);
+                $this->sendLog($userId, $type, $content);
+                return;
+            }
+
+            $tenantId = $user->tenant_id;
+            $imService = IMServiceFactory::createWeworkService($tenantId);
+
+            if (!$imService->isEnabled()) {
+                Log::warning('[Wework Notification] 租户未启用企业微信服务: ' . $tenantId);
+                $this->sendLog($userId, $type, $content);
+                return;
+            }
+
+            $result = $imService->sendNotification($user->wework_user_id, $content);
+
+            if ($result) {
+                Log::info('[Wework Notification] 发送成功 - User: ' . $userId . ', Type: ' . $type);
+            } else {
+                Log::error('[Wework Notification] 发送失败 - User: ' . $userId);
+            }
+        } catch (\Exception $e) {
+            Log::error('[Wework Notification] 异常: ' . $e->getMessage());
+            $this->sendLog($userId, $type, $content);
+        }
+    }
+
+    /**
      * 邮件通知（预留）
      */
     protected function sendEmail($userId, $type, $content)
@@ -214,44 +268,51 @@ class NotificationService
     /**
      * 格式化预定创建通知内容
      */
-    public function formatReservationCreate($booking)
+    public function formatReservationCreate($booking, ?int $tenantId = null)
     {
-        return "【会议室预定成功】\n会议主题: {$booking['title']}\n会议室: {$booking['room_name']}\n时间: {$booking['start_time']} ~ {$booking['end_time']}";
+        return $this->templateService->render($tenantId, self::TYPE_RESERVATION_CREATE, $booking);
     }
 
     /**
      * 格式化审批通过通知内容
      */
-    public function formatReservationApprove($booking)
+    public function formatReservationApprove($booking, ?int $tenantId = null)
     {
-        return "【预定审批通过】\n会议主题: {$booking['title']}\n会议室: {$booking['room_name']}\n时间: {$booking['start_time']} ~ {$booking['end_time']}";
+        return $this->templateService->render($tenantId, self::TYPE_RESERVATION_APPROVE, $booking);
     }
 
     /**
      * 格式化审批驳回通知内容
      */
-    public function formatReservationReject($booking, $reason = '')
+    public function formatReservationReject($booking, $reason = '', ?int $tenantId = null)
     {
-        $content = "【预定审批驳回】\n会议主题: {$booking['title']}";
-        if (!empty($reason)) {
-            $content .= "\n原因: {$reason}";
-        }
-        return $content;
+        $vars = array_merge($booking, ['reason' => $reason]);
+        return $this->templateService->render($tenantId, self::TYPE_RESERVATION_REJECT, $vars);
     }
 
     /**
      * 格式化会前提醒通知内容
      */
-    public function formatMeetingRemind($booking)
+    public function formatMeetingRemind($booking, ?int $tenantId = null)
     {
-        return "【会议即将开始】\n会议主题: {$booking['title']}\n会议室: {$booking['room_name']}\n时间: {$booking['start_time']}";
+        return $this->templateService->render($tenantId, 'meeting_remind', $booking);
     }
 
     /**
      * 格式化签到提醒通知内容
      */
-    public function formatCheckinRemind($booking)
+    public function formatCheckinRemind($booking, ?int $tenantId = null)
     {
-        return "【请签到】\n会议主题: {$booking['title']}\n会议室: {$booking['room_name']}\n请扫描会议室二维码完成签到";
+        return $this->templateService->render($tenantId, self::TYPE_RESERVATION_CHECKIN, $booking);
+    }
+
+    public function formatReservationCancel($booking, ?int $tenantId = null)
+    {
+        return $this->templateService->render($tenantId, self::TYPE_RESERVATION_CANCEL, $booking);
+    }
+
+    public function formatApprovalRemind($booking, ?int $tenantId = null)
+    {
+        return $this->templateService->render($tenantId, self::TYPE_APPROVAL_REMIND, $booking);
     }
 }

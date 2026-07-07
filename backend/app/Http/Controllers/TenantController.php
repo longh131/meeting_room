@@ -347,36 +347,17 @@ class TenantController extends Controller
      */
     public function getIMConfig(Request $request)
     {
+        $this->authorize('admin');
+
         $user = $request->user();
-        
+
         if (!$user->tenant_id) {
             return response()->json(['message' => '当前用户不属于任何租户'], 400);
         }
 
         $tenant = Tenant::findOrFail($user->tenant_id);
 
-        return response()->json([
-            'dingtalk_enabled' => $tenant->dingtalk_enabled,
-            'dingtalk_corp_id' => $tenant->dingtalk_corp_id,
-            'dingtalk_app_key' => $tenant->dingtalk_app_key,
-            'dingtalk_app_secret' => $tenant->dingtalk_app_secret,
-            'dingtalk_agent_id' => $tenant->dingtalk_agent_id,
-            'dingtalk_process_code' => $tenant->dingtalk_process_code,
-            'feishu_enabled' => $tenant->feishu_enabled,
-            'feishu_app_id' => $tenant->feishu_app_id,
-            'feishu_app_secret' => $tenant->feishu_app_secret,
-            'feishu_verification_token' => $tenant->feishu_verification_token,
-            'feishu_app_type' => $tenant->feishu_app_type,
-            'feishu_approval_code' => $tenant->feishu_approval_code,
-            'wework_enabled' => $tenant->wework_enabled,
-            'wework_corp_id' => $tenant->wework_corp_id,
-            'wework_secret' => $tenant->wework_secret,
-            'wework_agent_id' => $tenant->wework_agent_id,
-            'wework_token' => $tenant->wework_token,
-            'wework_encoding_aes_key' => $tenant->wework_encoding_aes_key,
-            'wework_approval_code' => $tenant->wework_approval_code,
-            'im_notification_channel' => $tenant->im_notification_channel,
-        ]);
+        return response()->json($this->formatIMConfigResponse($tenant));
     }
 
     /**
@@ -384,8 +365,10 @@ class TenantController extends Controller
      */
     public function updateIMConfig(Request $request)
     {
+        $this->authorize('admin');
+
         $user = $request->user();
-        
+
         if (!$user->tenant_id) {
             return response()->json(['message' => '当前用户不属于任何租户'], 400);
         }
@@ -393,23 +376,20 @@ class TenantController extends Controller
         $tenant = Tenant::findOrFail($user->tenant_id);
 
         $request->validate([
-            // 钉钉配置
             'dingtalk_enabled' => 'nullable|boolean',
             'dingtalk_corp_id' => 'nullable|string|max:100',
             'dingtalk_app_key' => 'nullable|string|max:100',
             'dingtalk_app_secret' => 'nullable|string|max:100',
             'dingtalk_agent_id' => 'nullable|string|max:50',
             'dingtalk_process_code' => 'nullable|string|max:100',
-            
-            // 飞书配置
+            'dingtalk_callback_token' => 'nullable|string|max:100',
+            'dingtalk_callback_aes_key' => 'nullable|string|max:100',
             'feishu_enabled' => 'nullable|boolean',
             'feishu_app_id' => 'nullable|string|max:100',
             'feishu_app_secret' => 'nullable|string|max:100',
             'feishu_verification_token' => 'nullable|string|max:255',
             'feishu_app_type' => 'nullable|in:self,store',
             'feishu_approval_code' => 'nullable|string|max:100',
-            
-            // 企业微信配置
             'wework_enabled' => 'nullable|boolean',
             'wework_corp_id' => 'nullable|string|max:100',
             'wework_secret' => 'nullable|string|max:100',
@@ -417,44 +397,73 @@ class TenantController extends Controller
             'wework_token' => 'nullable|string|max:100',
             'wework_encoding_aes_key' => 'nullable|string|max:100',
             'wework_approval_code' => 'nullable|string|max:100',
-            
-            // IM通知渠道
             'im_notification_channel' => 'nullable|in:log,dingtalk,feishu,wework',
         ]);
 
-        $tenant->update($request->only([
+        $data = $request->only([
             'dingtalk_enabled', 'dingtalk_corp_id', 'dingtalk_app_key',
-            'dingtalk_app_secret', 'dingtalk_agent_id', 'dingtalk_process_code',
-            'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_verification_token', 'feishu_app_type', 'feishu_approval_code',
-            'wework_enabled', 'wework_corp_id', 'wework_secret',
-            'wework_agent_id', 'wework_token', 'wework_encoding_aes_key', 'wework_approval_code',
+            'dingtalk_agent_id', 'dingtalk_process_code',
+            'dingtalk_callback_token', 'dingtalk_callback_aes_key',
+            'feishu_enabled', 'feishu_app_id', 'feishu_verification_token',
+            'feishu_app_type', 'feishu_approval_code',
+            'wework_enabled', 'wework_corp_id', 'wework_agent_id',
+            'wework_token', 'wework_approval_code',
             'im_notification_channel',
-        ]));
+        ]);
+
+        $secretFields = [
+            'dingtalk_app_secret', 'dingtalk_callback_token', 'dingtalk_callback_aes_key',
+            'feishu_app_secret', 'feishu_verification_token',
+            'wework_secret', 'wework_token', 'wework_encoding_aes_key',
+        ];
+
+        foreach ($secretFields as $field) {
+            if ($request->has($field)) {
+                $value = $request->input($field);
+                if ($value !== null && $value !== '' && $value !== '******') {
+                    $data[$field] = $value;
+                }
+            }
+        }
+
+        $tenant->update($data);
 
         return response()->json([
             'message' => 'IM配置更新成功',
-            'data' => [
-                'dingtalk_enabled' => $tenant->dingtalk_enabled,
-                'dingtalk_corp_id' => $tenant->dingtalk_corp_id,
-                'dingtalk_app_key' => $tenant->dingtalk_app_key,
-                'dingtalk_app_secret' => $tenant->dingtalk_app_secret,
-                'dingtalk_agent_id' => $tenant->dingtalk_agent_id,
-                'dingtalk_process_code' => $tenant->dingtalk_process_code,
-                'feishu_enabled' => $tenant->feishu_enabled,
-                'feishu_app_id' => $tenant->feishu_app_id,
-                'feishu_app_secret' => $tenant->feishu_app_secret,
-                'feishu_verification_token' => $tenant->feishu_verification_token,
-                'feishu_app_type' => $tenant->feishu_app_type,
-                'feishu_approval_code' => $tenant->feishu_approval_code,
-                'wework_enabled' => $tenant->wework_enabled,
-                'wework_corp_id' => $tenant->wework_corp_id,
-                'wework_secret' => $tenant->wework_secret,
-                'wework_agent_id' => $tenant->wework_agent_id,
-                'wework_token' => $tenant->wework_token,
-                'wework_encoding_aes_key' => $tenant->wework_encoding_aes_key,
-                'wework_approval_code' => $tenant->wework_approval_code,
-                'im_notification_channel' => $tenant->im_notification_channel,
-            ],
+            'data' => $this->formatIMConfigResponse($tenant->fresh()),
         ]);
+    }
+
+    /**
+     * 格式化 IM 配置响应，敏感字段脱敏
+     */
+    protected function formatIMConfigResponse(Tenant $tenant): array
+    {
+        $mask = fn ($value) => !empty($value) ? '******' : '';
+
+        return [
+            'dingtalk_enabled' => $tenant->dingtalk_enabled,
+            'dingtalk_corp_id' => $tenant->dingtalk_corp_id,
+            'dingtalk_app_key' => $tenant->dingtalk_app_key,
+            'dingtalk_app_secret' => $mask($tenant->dingtalk_app_secret),
+            'dingtalk_agent_id' => $tenant->dingtalk_agent_id,
+            'dingtalk_process_code' => $tenant->dingtalk_process_code,
+            'dingtalk_callback_token' => $mask($tenant->dingtalk_callback_token),
+            'dingtalk_callback_aes_key' => $mask($tenant->dingtalk_callback_aes_key),
+            'feishu_enabled' => $tenant->feishu_enabled,
+            'feishu_app_id' => $tenant->feishu_app_id,
+            'feishu_app_secret' => $mask($tenant->feishu_app_secret),
+            'feishu_verification_token' => $mask($tenant->feishu_verification_token),
+            'feishu_app_type' => $tenant->feishu_app_type,
+            'feishu_approval_code' => $tenant->feishu_approval_code,
+            'wework_enabled' => $tenant->wework_enabled,
+            'wework_corp_id' => $tenant->wework_corp_id,
+            'wework_secret' => $mask($tenant->wework_secret),
+            'wework_agent_id' => $tenant->wework_agent_id,
+            'wework_token' => $mask($tenant->wework_token),
+            'wework_encoding_aes_key' => $mask($tenant->wework_encoding_aes_key),
+            'wework_approval_code' => $tenant->wework_approval_code,
+            'im_notification_channel' => $tenant->im_notification_channel,
+        ];
     }
 }

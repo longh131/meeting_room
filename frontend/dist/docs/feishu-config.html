@@ -6,93 +6,162 @@
     <title>飞书对接配置说明</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.8; padding: 40px; }
-        .container { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-        h1 { text-align: center; color: #3370ff; margin-bottom: 30px; font-size: 28px; }
-        h2 { color: #3370ff; margin: 30px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #3370ff; font-size: 20px; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { border: 1px solid #e8e8e8; padding: 12px 15px; text-align: left; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.85; padding: 24px; }
+        .container { max-width: 920px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 36px 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        h1 { text-align: center; color: #3370ff; margin-bottom: 8px; font-size: 26px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 28px; font-size: 14px; }
+        h2 { color: #3370ff; margin: 32px 0 14px; padding-bottom: 8px; border-bottom: 2px solid #3370ff; font-size: 19px; }
+        h3 { color: #333; margin: 18px 0 10px; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+        th, td { border: 1px solid #e8e8e8; padding: 11px 14px; text-align: left; vertical-align: top; }
         th { background: #f0f5ff; color: #3370ff; font-weight: 600; }
-        td:first-child { font-weight: 600; width: 180px; }
-        ol { margin: 10px 0 10px 20px; }
-        li { margin: 10px 0; }
-        a { color: #3370ff; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .note { background: #fffbe6; border-left: 4px solid #faad14; padding: 12px 16px; margin: 15px 0; border-radius: 4px; }
-        .step-num { display: inline-block; background: #3370ff; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 8px; font-size: 14px; }
+        ol, ul { margin: 8px 0 8px 22px; }
+        li { margin: 8px 0; }
+        a { color: #3370ff; }
+        .note { background: #fffbe6; border-left: 4px solid #faad14; padding: 12px 16px; margin: 14px 0; border-radius: 4px; font-size: 14px; }
+        .tip { background: #f0f5ff; border-left: 4px solid #3370ff; padding: 12px 16px; margin: 14px 0; border-radius: 4px; font-size: 14px; }
+        .ok { background: #f6ffed; border-left: 4px solid #52c41a; padding: 12px 16px; margin: 14px 0; border-radius: 4px; font-size: 14px; }
+        .step-num { display: inline-block; background: #3370ff; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 8px; font-size: 13px; }
+        code { background: #f5f5f5; padding: 2px 8px; border-radius: 4px; font-size: 13px; word-break: break-all; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 6px; }
+        .required { background: #fff1f0; color: #cf1322; border: 1px solid #ffa39e; }
+        .optional { background: #f5f5f5; color: #666; border: 1px solid #d9d9d9; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📋 飞书对接配置说明</h1>
+        <h1>飞书对接配置说明</h1>
+        <p class="subtitle">按本文操作后，员工可在签到页用飞书扫码登录，系统可推送飞书消息、同步通讯录（需权限），并对接飞书审批（可选）</p>
 
-        <h2>一、需要提供的凭证信息</h2>
+        <div class="tip">
+            <strong>开始前准备：</strong><br>
+            1. 使用<strong>飞书企业管理员</strong>账号操作<br>
+            2. 在 IM 配置页顶部记下你的<strong>租户 ID</strong>（下文用 <code>{租户ID}</code> 表示，例如 <code>1</code>）<br>
+            3. 系统访问地址固定为 <code>https://meeting.sisuu.com</code>
+        </div>
+
+        <h2>一、配置完成后能实现什么</h2>
         <table>
-            <tr><th>参数</th><th>说明</th><th>获取位置</th></tr>
-            <tr><td>App ID</td><td>应用标识</td><td>开发者后台 → 应用详情 → 凭证与基础信息</td></tr>
-            <tr><td>App Secret</td><td>应用密钥</td><td>开发者后台 → 应用详情 → 凭证与基础信息</td></tr>
-            <tr><td>Approval Code</td><td>审批定义编码</td><td>审批管理 → 审批定义详情</td></tr>
-            <tr><td>Verification Token</td><td>事件验证Token</td><td>开发者后台 → 事件订阅</td></tr>
+            <tr><th>功能</th><th>需要填哪些项</th></tr>
+            <tr><td>会议室 PAD / 签到页「飞书登录」</td><td>AppId、AppSecret、应用类型选「企业自建应用」+ 配置重定向 URL</td></tr>
+            <tr><td>预定成功、审批结果等飞书消息</td><td>同上 + 通知设置选「飞书机器人消息」+ 消息与通讯录权限</td></tr>
+            <tr><td>预定走飞书审批</td><td>再加：审批定义 Code、Verification Token（事件订阅）</td></tr>
+            <tr><td>群机器人查会议室（可选）</td><td>Verification Token + 机器人事件订阅地址</td></tr>
         </table>
 
-        <h2>二、操作步骤</h2>
+        <h2>二、IM 配置页字段对照（填什么、从哪来）</h2>
+        <table>
+            <tr><th>本系统字段</th><th>是否必填</th><th>在飞书哪里找</th></tr>
+            <tr>
+                <td>飞书应用 AppId</td>
+                <td><span class="tag required">必填</span></td>
+                <td><a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a> → 你的应用 → <strong>凭证与基础信息</strong> → App ID</td>
+            </tr>
+            <tr>
+                <td>飞书应用 AppSecret</td>
+                <td><span class="tag required">必填</span></td>
+                <td>同上 → App Secret，点击「查看」后复制</td>
+            </tr>
+            <tr>
+                <td>Verification Token</td>
+                <td><span class="tag optional">配事件订阅时必填</span></td>
+                <td>应用 → <strong>事件订阅</strong> 里自己设定，飞书和本系统填<strong>完全相同</strong>的值（用于 URL 校验）</td>
+            </tr>
+            <tr>
+                <td>应用类型</td>
+                <td><span class="tag required">必填</span></td>
+                <td>一般选 <strong>企业自建应用</strong>；只有从飞书应用商店安装时才选「应用商店应用」</td>
+            </tr>
+            <tr>
+                <td>审批定义 Code</td>
+                <td><span class="tag optional">选填</span></td>
+                <td>只有「预定需飞书审批」才填。飞书管理后台 → 审批 → 审批定义详情 URL 中的 <code>approval_code</code></td>
+            </tr>
+        </table>
 
-        <h3><span class="step-num">1</span> 登录飞书开发者后台</h3>
-        <p>访问 <a href="https://open.feishu.cn/" target="_blank">https://open.feishu.cn/</a>，使用飞书管理员账号登录。</p>
+        <h2>三、在飞书开放平台创建应用</h2>
 
-        <h3><span class="step-num">2</span> 创建企业自建应用</h3>
+        <h3><span class="step-num">1</span> 登录并创建应用</h3>
         <ol>
+            <li>打开 <a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a>，使用管理员登录</li>
             <li>点击 <strong>创建企业自建应用</strong></li>
-            <li>填写应用名称（如：会议预定）、应用描述</li>
-            <li>上传应用图标</li>
-            <li>点击 <strong>创建</strong></li>
+            <li>填写应用名称（如：会议室预定）、描述、图标，点击创建</li>
         </ol>
 
-        <h3><span class="step-num">3</span> 获取 App ID 和 App Secret</h3>
+        <h3><span class="step-num">2</span> 复制 App ID 和 App Secret</h3>
+        <p>进入应用 → <strong>凭证与基础信息</strong>，复制到 IM 配置页。</p>
+
+        <h3><span class="step-num">3</span> 配置重定向 URL（扫码登录必做）</h3>
+        <p>应用 → <strong>安全设置</strong> → <strong>重定向 URL</strong>，添加：</p>
+        <ul>
+            <li><code>https://meeting.sisuu.com/api/oauth/callback/feishu?tenant_id={租户ID}</code></li>
+            <li><code>https://meeting.sisuu.com/checkin/</code>（签到页，建议整条前缀都加上）</li>
+        </ul>
+        <div class="note">员工扫 PAD 二维码签到时会打开 <code>/checkin/...</code>，未加白名单会导致飞书授权失败。</div>
+
+        <h3><span class="step-num">4</span> 申请权限</h3>
+        <p>应用 → <strong>权限管理</strong> → 开通以下权限（开通后需发布版本才生效）：</p>
+        <ul>
+            <li><strong>contact:user.base:readonly</strong> — 获取用户基本信息</li>
+            <li><strong>contact:department.base:readonly</strong> — 获取部门信息</li>
+            <li><strong>im:message</strong> 或「以应用身份发消息」— 发送预定/审批通知</li>
+            <li><strong>approval:approval</strong> — 发起与接收审批（仅在使用飞书审批时）</li>
+        </ul>
+
+        <h3><span class="step-num">5</span> 配置事件订阅（使用飞书审批时必做）</h3>
         <ol>
-            <li>应用详情页 → <strong>凭证与基础信息</strong></li>
-            <li>复制 <strong>App ID</strong></li>
-            <li>点击 App Secret 后的"查看"，复制</li>
+            <li>应用 → <strong>事件订阅</strong></li>
+            <li>请求地址 URL：<br><code>https://meeting.sisuu.com/api/callback/approval/feishu?tenant_id={租户ID}</code></li>
+            <li>设置 <strong>Verification Token</strong>（自定义一串字符），<strong>本系统 IM 配置页填相同值</strong></li>
+            <li>若平台要求 Encrypt Key，按飞书文档配置（本系统当前主要校验 Token）</li>
+            <li>订阅事件：<strong>approval_instance</strong>（审批实例状态变更）等审批相关事件</li>
+            <li>保存后等待「请求地址验证通过」</li>
         </ol>
 
-        <h3><span class="step-num">4</span> 创建审批定义并获取 Approval Code</h3>
+        <h3><span class="step-num">6</span> 创建审批定义（可选）</h3>
         <ol>
-            <li>飞书管理后台 → <strong>工作台</strong> → <strong>审批</strong></li>
-            <li>点击 <strong>创建审批</strong>，设计表单</li>
-            <li>保存并发布</li>
-            <li>在审批定义列表中，点击审批名称进入详情</li>
-            <li>URL 中的 <code>approval_code</code> 参数即为 <strong>Approval Code</strong></li>
-        </ol>
-
-        <h3><span class="step-num">5</span> 配置事件订阅</h3>
-        <ol>
-            <li>开发者后台 → 应用详情 → <strong>事件订阅</strong></li>
-            <li>设置请求网址URL为：<code>https://您的域名/api/feishu/callback</code></li>
-            <li>订阅以下事件：审批实例状态变更、通讯录用户变更、通讯录部门变更</li>
-        </ol>
-
-        <h3><span class="step-num">6</span> 配置应用权限</h3>
-        <ol>
-            <li>开发者后台 → 应用详情 → <strong>权限管理</strong></li>
-            <li>添加以下权限：
-                <ul>
-                    <li>获取通讯录部门信息</li>
-                    <li>获取通讯录用户信息</li>
-                    <li>审批实例的读写</li>
-                    <li>发送飞书消息</li>
-                </ul>
-            </li>
+            <li>飞书客户端 → 工作台 → <strong>审批</strong> → 创建审批定义</li>
+            <li>设计表单并发布</li>
+            <li>在审批定义详情页 URL 中找到 <code>approval_code=</code> 后面的编码，填到 IM 配置页「审批定义 Code」</li>
         </ol>
 
         <h3><span class="step-num">7</span> 发布应用</h3>
         <ol>
-            <li>开发者后台 → 应用详情 → <strong>版本管理与发布</strong></li>
-            <li>点击 <strong>创建版本</strong>，填写版本号和更新说明</li>
-            <li>申请发布，等待管理员审核通过</li>
+            <li>开放平台 → 应用 → <strong>版本管理与发布</strong></li>
+            <li>创建版本，提交发布（企业自建应用通常管理员直接通过）</li>
+            <li>在 <strong>可用性</strong> 中确保目标员工可见</li>
         </ol>
 
+        <h2>四、在本系统保存配置</h2>
+        <ol>
+            <li>打开 <a href="/admin/im-config">IM 配置</a> → <strong>飞书</strong> 标签</li>
+            <li>打开「启用」开关</li>
+            <li>应用类型选 <strong>企业自建应用</strong>（绝大多数情况）</li>
+            <li>填写 AppId、AppSecret；若配置了事件订阅，再填 Verification Token</li>
+            <li>点击 <strong>保存配置</strong></li>
+            <li>在 <strong>通知设置</strong> 中，若要发飞书消息，默认通知渠道选「飞书机器人消息」</li>
+        </ol>
+
+        <h2>五、验证是否成功</h2>
+        <table>
+            <tr><th>检查项</th><th>怎么测</th><th>正常表现</th></tr>
+            <tr><td>配置保存</td><td>保存后刷新页面</td><td>字段保留，密钥显示 ******</td></tr>
+            <tr><td>签到扫码</td><td>PAD 签到页 → 飞书登录</td><td>飞书授权后返回签到成功</td></tr>
+            <tr><td>消息推送</td><td>创建测试预定</td><td>飞书收到应用消息</td></tr>
+            <tr><td>审批同步</td><td>在飞书审批里操作</td><td>本系统预定状态更新</td></tr>
+        </table>
+
+        <div class="ok">
+            <strong>员工账号如何与飞书对应？</strong><br>
+            首次飞书登录时，系统按<strong>手机号或邮箱</strong>匹配已有用户；否则自动建号。请保证「用户管理」里手机号与飞书一致。
+        </div>
+
         <div class="note">
-            💡 <strong>提示：</strong>完成以上步骤后，请将获取到的 App ID、App Secret、Approval Code、Verification Token 提供给系统管理员进行配置。
+            <strong>常见问题</strong><br>
+            • 授权失败 / redirect_uri 错误 → 检查重定向 URL 是否完整、是否带 <code>tenant_id</code>（OAuth 那条）<br>
+            • 事件订阅验证失败 → Token 与 IM 配置页不一致，或服务器未公网可访问<br>
+            • 收不到消息 → 权限未发布、通知渠道未选飞书、用户未用飞书登录绑定过<br>
+            • 应用类型选错 → 自建应用必须选「企业自建应用」，否则 token 接口会报错
         </div>
     </div>
 </body>

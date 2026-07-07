@@ -89,7 +89,7 @@
         <el-upload
           ref="uploadRef"
           :action="importUrl"
-          :headers="uploadHeaders"
+          :headers="getUploadHeaders()"
           :show-file-list="false"
           :on-success="handleImportSuccess"
           :on-error="handleImportError"
@@ -110,7 +110,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from '@/utils/axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const users = ref([])
 const departments = ref([])
@@ -131,10 +131,11 @@ const editForm = ref({
   is_admin: false
 })
 
-const importUrl = '/users/import'
-const uploadHeaders = {
-  'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-}
+const importUrl = '/api/users/import'
+
+const getUploadHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem('access_token')}`
+})
 
 const fetchUsers = () => {
   axios.get('/users', {
@@ -143,8 +144,8 @@ const fetchUsers = () => {
       per_page: pageSize.value
     }
   }).then(res => {
-    users.value = res.data
-    total.value = res.total
+    users.value = res.data || res
+    total.value = res.meta?.total || res.total || 0
   })
 }
 
@@ -160,7 +161,7 @@ const editUser = (row) => {
 }
 
 const deleteUser = (row) => {
-  ElMessage.confirm('确定删除该用户？', '提示', {
+  ElMessageBox.confirm('确定删除该用户？', '提示', {
     type: 'warning'
   }).then(() => {
     axios.delete(`/users/${row.id}`).then(() => {

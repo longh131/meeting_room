@@ -141,8 +141,11 @@ class OAuthController extends Controller
             // 生成访问令牌
             $token = $user->createToken('dingtalk-oauth')->plainTextToken;
 
-            // 重定向到前端并携带token
-            return redirect('/oauth-success?token=' . $token . '&tenant_id=' . $tenantId);
+            // 重定向到前端，token 通过 hash 传递避免泄露到服务器日志
+            return redirect('/oauth-success#' . http_build_query([
+                'token' => $token,
+                'tenant_id' => $tenantId,
+            ]));
         } catch (\Exception $e) {
             Log::error('[OAuth] 钉钉登录失败: ' . $e->getMessage());
             return redirect('/login?error=oauth_failed');
@@ -179,8 +182,11 @@ class OAuthController extends Controller
             // 生成访问令牌
             $token = $user->createToken('feishu-oauth')->plainTextToken;
 
-            // 重定向到前端并携带token
-            return redirect('/oauth-success?token=' . $token . '&tenant_id=' . $tenantId);
+            // 重定向到前端，token 通过 hash 传递避免泄露到服务器日志
+            return redirect('/oauth-success#' . http_build_query([
+                'token' => $token,
+                'tenant_id' => $tenantId,
+            ]));
         } catch (\Exception $e) {
             Log::error('[OAuth] 飞书登录失败: ' . $e->getMessage());
             return redirect('/login?error=oauth_failed');

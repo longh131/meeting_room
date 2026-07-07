@@ -10,35 +10,8 @@ use Illuminate\Support\Facades\Log;
  * 飞书IM服务实现
  * 支持多租户架构，每个租户独立配置飞书应用
  */
-class FeishuService implements IMService
+class FeishuService extends AbstractIMService
 {
-    protected $tenantId;
-    protected $tenant;
-    protected $accessToken;
-    protected $tokenExpiresAt;
-
-    /**
-     * 设置当前租户
-     */
-    public function setTenant(int $tenantId): void
-    {
-        $this->tenantId = $tenantId;
-        $this->tenant = Tenant::find($tenantId);
-        $this->accessToken = null;
-        $this->tokenExpiresAt = 0;
-    }
-
-    /**
-     * 获取当前租户ID
-     */
-    public function getTenantId(): ?int
-    {
-        return $this->tenantId;
-    }
-
-    /**
-     * 检查租户是否启用了飞书服务
-     */
     public function isEnabled(): bool
     {
         if (!$this->tenant) {
@@ -58,8 +31,8 @@ class FeishuService implements IMService
             throw new \Exception('未设置租户');
         }
 
-        if ($this->accessToken && time() < $this->tokenExpiresAt) {
-            return $this->accessToken;
+        if ($cached = $this->getCachedToken()) {
+            return $cached;
         }
 
         try {
@@ -81,8 +54,7 @@ class FeishuService implements IMService
             }
 
             $tokenKey = $this->tenant->feishu_app_type === 'store' ? 'app_access_token' : 'tenant_access_token';
-            $this->accessToken = $result[$tokenKey];
-            $this->tokenExpiresAt = time() + $result['expire'] - 60;
+            $this->cacheToken($result[$tokenKey], $result['expire']);
             return $this->accessToken;
         } catch (\Exception $e) {
             Log::error('[Feishu] 租户' . $this->tenantId . '获取access_token异常');
@@ -390,7 +362,7 @@ class FeishuService implements IMService
             $nonceStr = uniqid();
             $timestamp = time();
 
-            $signature = $this->generateSignature($ticket, $nonceStr, $timestamp, $url);
+            $signature = $this->generateJsSignature($ticket, $nonceStr, $timestamp, $url);
 
             return [
                 'appId' => $this->tenant->feishu_app_id,
@@ -403,14 +375,5 @@ class FeishuService implements IMService
             Log::error('[Feishu] 租户' . $this->tenantId . 'getJsApiConfig异常');
             return [];
         }
-    }
-
-    /**
-     * 生成签名
-     */
-    protected function generateSignature(string $ticket, string $nonceStr, int $timestamp, string $url): string
-    {
-        $plainText = "jsapi_ticket={$ticket}&noncestr={$nonceStr}&timestamp={$timestamp}&url={$url}";
-        return sha1($plainText);
     }
 }

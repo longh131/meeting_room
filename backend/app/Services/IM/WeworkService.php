@@ -10,35 +10,8 @@ use Illuminate\Support\Facades\Log;
  * 企业微信IM服务实现
  * 支持多租户架构，每个租户独立配置企业微信应用
  */
-class WeworkService implements IMService
+class WeworkService extends AbstractIMService
 {
-    protected $tenantId;
-    protected $tenant;
-    protected $accessToken;
-    protected $tokenExpiresAt;
-
-    /**
-     * 设置当前租户
-     */
-    public function setTenant(int $tenantId): void
-    {
-        $this->tenantId = $tenantId;
-        $this->tenant = Tenant::find($tenantId);
-        $this->accessToken = null;
-        $this->tokenExpiresAt = 0;
-    }
-
-    /**
-     * 获取当前租户ID
-     */
-    public function getTenantId(): ?int
-    {
-        return $this->tenantId;
-    }
-
-    /**
-     * 检查租户是否启用了企业微信服务
-     */
     public function isEnabled(): bool
     {
         if (!$this->tenant) {
@@ -58,8 +31,8 @@ class WeworkService implements IMService
             throw new \Exception('未设置租户');
         }
 
-        if ($this->accessToken && time() < $this->tokenExpiresAt) {
-            return $this->accessToken;
+        if ($cached = $this->getCachedToken()) {
+            return $cached;
         }
 
         try {
@@ -71,8 +44,7 @@ class WeworkService implements IMService
             $result = $response->json();
 
             if ($result['errcode'] == 0) {
-                $this->accessToken = $result['access_token'];
-                $this->tokenExpiresAt = time() + $result['expires_in'] - 60;
+                $this->cacheToken($result['access_token'], $result['expires_in']);
                 return $this->accessToken;
             }
 

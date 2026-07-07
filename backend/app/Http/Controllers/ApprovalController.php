@@ -18,6 +18,8 @@ class ApprovalController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorize('manager');
+
         $query = Approval::with(['reservation.meetingRoom', 'reservation.user', 'approver']);
 
         if ($request->has('approver_id')) {
@@ -35,28 +37,39 @@ class ApprovalController extends Controller
 
     public function show($id)
     {
+        $this->authorize('manager');
+
         $approval = Approval::with(['reservation.meetingRoom', 'reservation.user', 'reservation.attendees'])->findOrFail($id);
         return response()->json($approval);
     }
 
     public function approve(Request $request, $id)
     {
+        $this->authorize('manager');
+
         $request->validate([
             'comment' => 'nullable|string',
         ]);
 
         $approval = Approval::findOrFail($id);
-        
+
         if ($approval->approver_id !== $request->user()->id && !$request->user()->is_admin) {
             return response()->json(['error' => '无权限审批'], 403);
         }
 
         $approval->approve($request->comment);
 
-        $this->notificationService->send(
-            $approval->reservation->user_id,
+        $reservation = $approval->reservation;
+        $reservation->load('meetingRoom');
+        $this->notificationService->sendByUserSource(
+            $reservation->user_id,
             NotificationService::TYPE_RESERVATION_APPROVE,
-            "您的会议预定已通过审批：{$approval->reservation->title}"
+            $this->notificationService->formatReservationApprove([
+                'title' => $reservation->title,
+                'room_name' => $reservation->meetingRoom->name ?? '',
+                'start_time' => $reservation->start_time->format('Y-m-d H:i'),
+                'end_time' => $reservation->end_time->format('Y-m-d H:i'),
+            ], $reservation->tenant_id)
         );
 
         return response()->json($approval);
@@ -64,6 +77,8 @@ class ApprovalController extends Controller
 
     public function reject(Request $request, $id)
     {
+        $this->authorize('manager');
+
         $request->validate([
             'comment' => 'required|string',
         ]);
@@ -76,10 +91,13 @@ class ApprovalController extends Controller
 
         $approval->reject($request->comment);
 
-        $this->notificationService->send(
-            $approval->reservation->user_id,
+        $reservation = $approval->reservation;
+        $this->notificationService->sendByUserSource(
+            $reservation->user_id,
             NotificationService::TYPE_RESERVATION_REJECT,
-            "您的会议预定已被驳回：{$approval->reservation->title}，原因：{$request->comment}"
+            $this->notificationService->formatReservationReject([
+                'title' => $reservation->title,
+            ], $request->comment, $reservation->tenant_id)
         );
 
         return response()->json($approval);
@@ -87,16 +105,25 @@ class ApprovalController extends Controller
 
     public function remind($id)
     {
+        $this->authorize('manager');
+
         $approval = Approval::findOrFail($id);
 
         if ($approval->status !== Approval::STATUS_PENDING) {
             return response()->json(['error' => '审批状态不允许催办'], 400);
         }
 
-        $this->notificationService->send(
+        $reservation = $approval->reservation;
+        $reservation->load('meetingRoom');
+
+        $this->notificationService->sendByUserSource(
             $approval->approver_id,
             NotificationService::TYPE_APPROVAL_REMIND,
-            "请及时处理会议预定审批：{$approval->reservation->title}"
+            $this->notificationService->formatApprovalRemind([
+                'title' => $reservation->title,
+                'room_name' => $reservation->meetingRoom->name ?? '',
+                'start_time' => $reservation->start_time->format('Y-m-d H:i'),
+            ], $reservation->tenant_id)
         );
 
         return response()->json(['message' => '催办通知已发送']);

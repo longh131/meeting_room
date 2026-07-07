@@ -99,7 +99,7 @@ const loadRooms = async () => {
   if (capacityFilter.value) params.capacity = capacityFilter.value
   
   const response = await axios.get('/meeting-rooms', { params })
-  const data = response.data
+  const data = Array.isArray(response) ? response : (response.data || [])
   
   const favorites = await axios.get('/favorites')
   const favoriteIds = favorites.map(f => f.id)

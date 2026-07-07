@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Models\Department;
 use App\Models\User;
 use App\Services\IM\IMServiceFactory;
+use App\Services\OrganizationSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -31,7 +32,7 @@ class OrganizationController extends Controller
             // 从本地数据库获取部门树
             $departments = Department::where('tenant_id', $tenantId)
                 ->orderBy('parent_id')
-                ->orderBy('order')
+                ->orderBy('sort_order')
                 ->get();
 
             $tree = $this->buildDepartmentTree($departments);
@@ -117,146 +118,28 @@ class OrganizationController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function syncToLocal(Request $request)
+    public function syncToLocal(Request $request, OrganizationSyncService $syncService)
     {
         try {
             $user = Auth::user();
-            $tenantId = $user->tenant_id;
+            $result = $syncService->syncTenantToLocal($user->tenant_id);
 
-            $tenant = Tenant::find($tenantId);
-            if (!$tenant) {
-                return response()->json(['error' => '租户不存在'], 404);
+            if (!$result['success']) {
+                return response()->json(['error' => $result['message']], 400);
             }
-
-            $imService = IMServiceFactory::getEnabledService($tenantId);
-            
-            if (!$imService) {
-                return response()->json(['error' => '租户未启用IM服务'], 400);
-            }
-
-            // 获取IM平台的部门树（包含用户）
-            $departments = $imService->getDepartments(true);
-
-            // 同步部门
-            $deptCount = $this->syncDepartmentsToLocal($departments, $tenantId);
-
-            // 同步用户
-            $userCount = $this->syncUsersToLocal($departments, $tenantId);
 
             return response()->json([
                 'success' => true,
                 'message' => '同步完成',
                 'data' => [
-                    'departments_count' => $deptCount,
-                    'users_count' => $userCount,
+                    'departments_count' => $result['departments_count'],
+                    'users_count' => $result['users_count'],
                 ],
             ]);
         } catch (\Exception $e) {
             Log::error('[Organization] 同步到本地失败: ' . $e->getMessage());
             return response()->json(['error' => '同步失败: ' . $e->getMessage()], 500);
         }
-    }
-
-    /**
-     * 同步部门到本地数据库
-     *
-     * @param array $departments IM部门列表
-     * @param int $tenantId 租户ID
-     * @return int 同步数量
-     */
-    protected function syncDepartmentsToLocal(array $departments, int $tenantId): int
-    {
-        $count = 0;
-
-        foreach ($departments as $dept) {
-            $localDept = Department::updateOrCreate(
-                [
-                    'tenant_id' => $tenantId,
-                    'im_department_id' => $dept['id'],
-                ],
-                [
-                    'name' => $dept['name'],
-                    'parent_id' => $this->findLocalParentId($dept['parent_id'], $tenantId),
-                    'order' => $dept['order'] ?? 0,
-                ]
-            );
-
-            $count++;
-        }
-
-        return $count;
-    }
-
-    /**
-     * 同步用户到本地数据库
-     *
-     * @param array $departments IM部门列表（包含用户）
-     * @param int $tenantId 租户ID
-     * @return int 同步数量
-     */
-    protected function syncUsersToLocal(array $departments, int $tenantId): int
-    {
-        $count = 0;
-        $source = IMServiceFactory::getEnabledService($tenantId)->getTenantId() ? 
-                  ($tenant->dingtalk_enabled ? 'DINGTALK' : 'FEISHU') : 'LOCAL';
-
-        $tenant = Tenant::find($tenantId);
-        $source = $tenant->dingtalk_enabled ? 'DINGTALK' : ($tenant->feishu_enabled ? 'FEISHU' : 'LOCAL');
-
-        foreach ($departments as $dept) {
-            $localDept = Department::where('tenant_id', $tenantId)
-                ->where('im_department_id', $dept['id'])
-                ->first();
-
-            foreach ($dept['users'] as $imUser) {
-                $userIdField = $source === 'DINGTALK' ? 'dingtalk_user_id' : 'feishu_open_id';
-                $imUserId = $imUser['userid'] ?? $imUser['open_id'] ?? $imUser['user_id'] ?? null;
-
-                if (!$imUserId) {
-                    continue;
-                }
-
-                User::updateOrCreate(
-                    [
-                        'tenant_id' => $tenantId,
-                        $userIdField => $imUserId,
-                    ],
-                    [
-                        'name' => $imUser['name'] ?? $imUser['username'] ?? '',
-                        'email' => $imUser['email'] ?? null,
-                        'phone' => $imUser['mobile'] ?? $imUser['phone'] ?? null,
-                        'department_id' => $localDept ? $localDept->id : null,
-                        'position' => $imUser['position'] ?? $imUser['job_title'] ?? '',
-                        'source' => $source,
-                        'status' => true,
-                    ]
-                );
-
-                $count++;
-            }
-        }
-
-        return $count;
-    }
-
-    /**
-     * 查找本地父部门ID
-     *
-     * @param string $imParentId IM父部门ID
-     * @param int $tenantId 租户ID
-     * @return int|null
-     */
-    protected function findLocalParentId(string $imParentId, int $tenantId): ?int
-    {
-        if (empty($imParentId) || $imParentId == '0' || $imParentId == '1') {
-            return null;
-        }
-
-        $parentDept = Department::where('tenant_id', $tenantId)
-            ->where('im_department_id', $imParentId)
-            ->first();
-
-        return $parentDept ? $parentDept->id : null;
     }
 
     /**
@@ -275,7 +158,7 @@ class OrganizationController extends Controller
                 'id' => $dept->id,
                 'name' => $dept->name,
                 'parent_id' => $dept->parent_id,
-                'order' => $dept->order,
+                'sort_order' => $dept->sort_order,
                 'children' => [],
             ];
         }

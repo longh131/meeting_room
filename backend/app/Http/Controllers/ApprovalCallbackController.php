@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Approval;
 use App\Models\Reservation;
 use App\Models\Tenant;
+use App\Services\IM\CallbackVerifier;
 use App\Services\IM\IMServiceFactory;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -16,12 +17,6 @@ use Illuminate\Support\Facades\Log;
  */
 class ApprovalCallbackController extends Controller
 {
-    /**
-     * 钉钉审批回调
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function dingtalkCallback(Request $request)
     {
         try {
@@ -41,10 +36,21 @@ class ApprovalCallbackController extends Controller
                 return response()->json(['errcode' => -1, 'errmsg' => '租户未启用钉钉'], 400);
             }
 
+            if (!empty($tenant->dingtalk_callback_token)) {
+                $signature = $request->input('signature') ?? $request->header('signature');
+                $timestamp = $request->input('timestamp') ?? $request->header('timestamp');
+                $nonce = $request->input('nonce') ?? $request->header('nonce');
+
+                if (!CallbackVerifier::verifyDingtalk($tenant, $timestamp, $nonce, $signature)) {
+                    Log::error('[Dingtalk Callback] 签名校验失败: ' . $tenantId);
+                    return response()->json(['errcode' => -1, 'errmsg' => '签名校验失败'], 403);
+                }
+            }
+
             $imService = IMServiceFactory::createDingtalkService($tenantId);
             $result = $imService->handleApprovalCallback($data);
 
-            if ($result['success']) {
+            if ($result['success'] && in_array($result['status'], ['approved', 'rejected'])) {
                 $this->updateReservationStatus($result['process_instance_id'], $result['status'], $tenantId);
             }
 
@@ -55,12 +61,6 @@ class ApprovalCallbackController extends Controller
         }
     }
 
-    /**
-     * 飞书审批回调
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function feishuCallback(Request $request)
     {
         try {
@@ -80,10 +80,19 @@ class ApprovalCallbackController extends Controller
                 return response()->json(['code' => -1, 'msg' => '租户未启用飞书'], 400);
             }
 
+            $verifyResult = CallbackVerifier::handleFeishu($tenant, $data);
+            if ($verifyResult['type'] === 'error') {
+                Log::error('[Feishu Callback] Token校验失败: ' . $tenantId);
+                return response()->json(['code' => -1, 'msg' => 'Token校验失败'], 403);
+            }
+            if ($verifyResult['type'] === 'challenge') {
+                return response()->json(['challenge' => $verifyResult['challenge']]);
+            }
+
             $imService = IMServiceFactory::createFeishuService($tenantId);
             $result = $imService->handleApprovalCallback($data);
 
-            if ($result['success']) {
+            if ($result['success'] && in_array($result['status'], ['approved', 'rejected'])) {
                 $this->updateReservationStatus($result['process_instance_id'], $result['status'], $tenantId);
             }
 
@@ -94,12 +103,6 @@ class ApprovalCallbackController extends Controller
         }
     }
 
-    /**
-     * 企业微信审批回调
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function weworkCallback(Request $request)
     {
         try {
@@ -122,7 +125,7 @@ class ApprovalCallbackController extends Controller
             $imService = IMServiceFactory::createWeworkService($tenantId);
             $result = $imService->handleApprovalCallback($data);
 
-            if ($result['success']) {
+            if ($result['success'] && in_array($result['status'], ['approved', 'rejected'])) {
                 $this->updateReservationStatus($result['process_instance_id'], $result['status'], $tenantId);
             }
 
@@ -133,13 +136,6 @@ class ApprovalCallbackController extends Controller
         }
     }
 
-    /**
-     * 更新预定状态
-     *
-     * @param string $processInstanceId
-     * @param string $status
-     * @param int $tenantId
-     */
     protected function updateReservationStatus(string $processInstanceId, string $status, int $tenantId)
     {
         $approval = Approval::where('process_instance_id', $processInstanceId)
@@ -162,15 +158,13 @@ class ApprovalCallbackController extends Controller
 
         switch ($status) {
             case 'approved':
-                $reservation->status = 'approved';
-                $approval->status = 'approved';
-                $this->sendApprovalNotification($reservation, $notificationService, true);
+                $approval->approve();
+                $this->sendApprovalNotification($reservation->fresh(), $notificationService, true);
                 break;
 
             case 'rejected':
-                $reservation->status = 'rejected';
-                $approval->status = 'rejected';
-                $this->sendApprovalNotification($reservation, $notificationService, false);
+                $approval->reject();
+                $this->sendApprovalNotification($reservation->fresh(), $notificationService, false);
                 break;
 
             default:
@@ -178,34 +172,25 @@ class ApprovalCallbackController extends Controller
                 return;
         }
 
-        $reservation->save();
-        $approval->save();
-
         Log::info('[Approval Callback] 租户' . $tenantId . '预定状态已更新: ' . $reservation->id . ' - ' . $status);
     }
 
-    /**
-     * 发送审批结果通知
-     *
-     * @param Reservation $reservation
-     * @param NotificationService $notificationService
-     * @param bool $approved
-     */
     protected function sendApprovalNotification(Reservation $reservation, NotificationService $notificationService, bool $approved)
     {
         try {
+            $reservation->load('meetingRoom');
             $booking = [
                 'title' => $reservation->title,
                 'room_name' => $reservation->meetingRoom->name ?? '',
-                'start_time' => $reservation->start_time,
-                'end_time' => $reservation->end_time,
+                'start_time' => $reservation->start_time->format('Y-m-d H:i'),
+                'end_time' => $reservation->end_time->format('Y-m-d H:i'),
             ];
 
             if ($approved) {
-                $content = $notificationService->formatReservationApprove($booking);
+                $content = $notificationService->formatReservationApprove($booking, $reservation->tenant_id);
                 $notificationService->sendByUserSource($reservation->user_id, NotificationService::TYPE_RESERVATION_APPROVE, $content);
             } else {
-                $content = $notificationService->formatReservationReject($booking);
+                $content = $notificationService->formatReservationReject($booking, '', $reservation->tenant_id);
                 $notificationService->sendByUserSource($reservation->user_id, NotificationService::TYPE_RESERVATION_REJECT, $content);
             }
         } catch (\Exception $e) {
@@ -213,18 +198,9 @@ class ApprovalCallbackController extends Controller
         }
     }
 
-    /**
-     * 审批校验接口（用于钉钉/飞书验证回调URL）
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\Response|\Illuminate\Http\JsonResponse
-     */
     public function verify(Request $request)
     {
         try {
-            $signature = $request->input('signature');
-            $timestamp = $request->input('timestamp');
-            $nonce = $request->input('nonce');
             $echostr = $request->input('echostr');
 
             if (!empty($echostr)) {

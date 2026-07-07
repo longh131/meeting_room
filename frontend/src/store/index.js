@@ -1,4 +1,5 @@
 import { createStore } from 'vuex'
+import axios from '@/utils/axios'
 
 export default createStore({
   state: {
@@ -37,26 +38,14 @@ export default createStore({
       commit('SET_DEVICE_TAGS', tags)
     },
     async getIMConfig({ state }) {
-      const response = await fetch('/api/tenants/im-config', {
-        headers: {
-          'Authorization': `Bearer ${state.token}`,
-          'Content-Type': 'application/json'
-        }
+      return await axios.get('/tenants/im-config', {
+        headers: { Authorization: `Bearer ${state.token}` }
       })
-      if (!response.ok) throw new Error('获取IM配置失败')
-      return await response.json()
     },
     async updateIMConfig({ state }, config) {
-      const response = await fetch('/api/tenants/im-config', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${state.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(config)
+      return await axios.put('/tenants/im-config', config, {
+        headers: { Authorization: `Bearer ${state.token}` }
       })
-      if (!response.ok) throw new Error('更新IM配置失败')
-      return await response.json()
     }
   },
   getters: {

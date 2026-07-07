@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\MeetingRoom;
+use App\Models\Reservation;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class MeetingRoomController extends Controller
 {
@@ -148,8 +150,8 @@ class MeetingRoomController extends Controller
     {
         $request->validate([
             'meeting_room_id' => 'required|integer',
-            'start_time' => 'required|datetime',
-            'end_time' => 'required|datetime|after:start_time',
+            'start_time' => 'required|date',
+            'end_time' => 'required|date|after:start_time',
             'exclude_reservation_id' => 'nullable|integer',
         ]);
 
@@ -157,6 +159,26 @@ class MeetingRoomController extends Controller
         $available = $room->isAvailable($request->start_time, $request->end_time, $request->exclude_reservation_id);
 
         return response()->json(['available' => $available]);
+    }
+
+    public function recommend(Request $request, \App\Services\RoomRecommendationService $recommendationService)
+    {
+        $request->validate([
+            'start_time' => 'required|date',
+            'end_time' => 'required|date|after:start_time',
+            'capacity' => 'nullable|integer|min:1',
+            'floor' => 'nullable|integer',
+            'device_tags' => 'nullable|array',
+        ]);
+
+        $results = $recommendationService->recommend(
+            $request->user(),
+            \Carbon\Carbon::parse($request->start_time),
+            \Carbon\Carbon::parse($request->end_time),
+            $request->only(['capacity', 'floor', 'device_tags'])
+        );
+
+        return response()->json(['data' => $results]);
     }
 
     public function getFloors()
@@ -244,51 +266,29 @@ class MeetingRoomController extends Controller
             return response()->json(['message' => '会议已签到'], 400);
         }
         
-        // 获取用户身份（支持钉钉/飞书OAuth或本地token）
-        $user = $this->getUserFromRequest();
-        
+        // 获取用户身份（支持 JWT token、钉钉/飞书 OAuth）
+        $user = $this->getUserFromRequest($tenant->id);
+
         if (!$user) {
             return response()->json(['message' => '无法识别用户身份'], 401);
         }
-        
+
+        if ($user->tenant_id !== $tenant->id) {
+            return response()->json(['message' => '用户不属于该租户'], 403);
+        }
+
         // 验证用户是否是参会人员或组织者
-        $isValidAttendee = false;
-        
-        // 检查是否是组织者
-        if ($currentReservation->user_id == $user->id) {
-            $isValidAttendee = true;
-        }
-        
-        // 检查是否是参会人员（修复：attendees可能是JSON字符串）
-        if (!$isValidAttendee) {
-            $attendees = $currentReservation->attendees;
-            if (!empty($attendees)) {
-                // 尝试解析为数组
-                if (is_string($attendees)) {
-                    $attendees = json_decode($attendees, true) ?? [];
-                }
-                if (is_array($attendees)) {
-                    foreach ($attendees as $attendee) {
-                        // 兼容不同格式：可能是对象或数组
-                        $attendeeUserId = isset($attendee['user_id']) ? $attendee['user_id'] : 
-                                          (isset($attendee->user_id) ? $attendee->user_id : null);
-                        if ($attendeeUserId == $user->id) {
-                            $isValidAttendee = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        
+        $isValidAttendee = $currentReservation->user_id == $user->id
+            || $currentReservation->attendees()->where('users.id', $user->id)->exists();
+
         if (!$isValidAttendee) {
             return response()->json(['message' => '您不是本次会议的参会人员'], 403);
         }
-        
+
         // 签到
         $currentReservation->update([
             'checkin_time' => $now,
-            'status' => 3, // 签到进行中
+            'status' => Reservation::STATUS_CHECKIN,
         ]);
         
         return response()->json([
@@ -299,102 +299,56 @@ class MeetingRoomController extends Controller
     
     /**
      * 从请求中获取用户身份
-     * 支持：JWT token、钉钉OAuth、飞书OAuth
+     * 支持：Sanctum Bearer token、钉钉 OAuth、飞书 OAuth
      */
-    private function getUserFromRequest()
+    private function getUserFromRequest(int $tenantId)
     {
-        // 优先使用 Laravel 内置认证（安全可靠）
+        $token = request()->bearerToken();
+        if ($token) {
+            $accessToken = PersonalAccessToken::findToken($token);
+            if ($accessToken) {
+                return $accessToken->tokenable;
+            }
+        }
+
         if (auth()->check()) {
             return auth()->user();
         }
-        
-        // 尝试通过请求中的用户ID获取（用于内部调用）
-        $userId = request()->input('user_id');
-        if ($userId) {
-            return \App\Models\User::find($userId);
-        }
-        
-        // 尝试通过钉钉临时授权码获取用户
+
         $dingtalkCode = request()->input('dingtalk_code');
-        if ($dingtalkCode && request()->input('tenant_id')) {
+        if ($dingtalkCode) {
             try {
-                $tenant = \App\Models\Tenant::find(request()->input('tenant_id'));
+                $tenant = \App\Models\Tenant::find($tenantId);
                 if ($tenant && $tenant->dingtalk_enabled) {
                     $imService = \App\Services\IM\IMServiceFactory::createDingtalkService($tenant->id);
                     $userInfo = $imService->getUserByAuthCode($dingtalkCode);
-                    
-                    // 查找或创建用户
-                    return \App\Models\User::firstOrCreate(
-                        ['dingtalk_user_id' => $userInfo['user_id']],
-                        [
-                            'name' => $userInfo['name'],
-                            'email' => $userInfo['email'] ?? '',
-                            'phone' => $userInfo['mobile'] ?? '',
-                            'tenant_id' => $tenant->id,
-                            'source' => 'DINGTALK',
-                            'status' => true,
-                        ]
-                    );
+
+                    return \App\Models\User::where('tenant_id', $tenantId)
+                        ->where('dingtalk_user_id', $userInfo['user_id'])
+                        ->first();
                 }
             } catch (\Exception $e) {
                 // 钉钉验证失败，继续尝试其他方式
             }
         }
-        
-        // 尝试通过飞书临时授权码获取用户
+
         $feishuCode = request()->input('feishu_code');
-        if ($feishuCode && request()->input('tenant_id')) {
+        if ($feishuCode) {
             try {
-                $tenant = \App\Models\Tenant::find(request()->input('tenant_id'));
+                $tenant = \App\Models\Tenant::find($tenantId);
                 if ($tenant && $tenant->feishu_enabled) {
                     $imService = \App\Services\IM\IMServiceFactory::createFeishuService($tenant->id);
                     $userInfo = $imService->getUserByAuthCode($feishuCode);
-                    
-                    // 查找或创建用户
-                    return \App\Models\User::firstOrCreate(
-                        ['feishu_open_id' => $userInfo['user_id']],
-                        [
-                            'name' => $userInfo['name'],
-                            'email' => $userInfo['email'] ?? '',
-                            'phone' => $userInfo['mobile'] ?? '',
-                            'tenant_id' => $tenant->id,
-                            'source' => 'FEISHU',
-                            'status' => true,
-                        ]
-                    );
+
+                    return \App\Models\User::where('tenant_id', $tenantId)
+                        ->where('feishu_open_id', $userInfo['user_id'])
+                        ->first();
                 }
             } catch (\Exception $e) {
-                // 飞书验证失败，继续尝试其他方式
+                // 飞书验证失败
             }
         }
-        
-        // 尝试通过企业微信临时授权码获取用户
-        $weworkCode = request()->input('wework_code');
-        if ($weworkCode && request()->input('tenant_id')) {
-            try {
-                $tenant = \App\Models\Tenant::find(request()->input('tenant_id'));
-                if ($tenant && $tenant->wework_enabled) {
-                    $imService = \App\Services\IM\IMServiceFactory::createWeworkService($tenant->id);
-                    $userInfo = $imService->getUserByAuthCode($weworkCode);
-                    
-                    // 查找或创建用户
-                    return \App\Models\User::firstOrCreate(
-                        ['wework_user_id' => $userInfo['user_id']],
-                        [
-                            'name' => $userInfo['name'],
-                            'email' => $userInfo['email'] ?? '',
-                            'phone' => $userInfo['mobile'] ?? '',
-                            'tenant_id' => $tenant->id,
-                            'source' => 'WEWORK',
-                            'status' => true,
-                        ]
-                    );
-                }
-            } catch (\Exception $e) {
-                // 企业微信验证失败
-            }
-        }
-        
+
         return null;
     }
 }

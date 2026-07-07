@@ -2,9 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Resources\UserResource;
 use App\Models\Department;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -25,34 +30,24 @@ class UserController extends Controller
 
         $users = $query->paginate(20);
 
-        return response()->json($users);
+        return UserResource::collection($users);
     }
 
     public function show($id)
     {
         $user = User::with('department')->findOrFail($id);
-        return response()->json($user);
+        return new UserResource($user);
     }
 
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $this->authorize('admin');
-
-        $request->validate([
-            'name' => 'required|string|max:50',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:6',
-            'department_id' => 'nullable|integer|exists:departments,id',
-            'position' => 'nullable|string|max:50',
-        ]);
-
         $userData = $request->only(['name', 'email', 'department_id', 'position']);
         $userData['password'] = bcrypt($request->password);
         $userData['status'] = 1;
-        
+
         $user = User::create($userData);
 
-        return response()->json($user, 201);
+        return (new UserResource($user))->response()->setStatusCode(201);
     }
 
     public function update(Request $request, $id)
@@ -60,10 +55,14 @@ class UserController extends Controller
         $this->authorize('admin');
 
         $user = User::findOrFail($id);
+        $tenantId = $request->user()->tenant_id;
 
         $request->validate([
             'name' => 'required|string|max:50',
-            'email' => 'required|email|unique:users,email,' . $id,
+            'email' => [
+                'required', 'email',
+                Rule::unique('users')->where(fn ($q) => $q->where('tenant_id', $tenantId))->ignore($id),
+            ],
             'department_id' => 'nullable|integer|exists:departments,id',
             'position' => 'nullable|string|max:50',
             'is_manager' => 'boolean',
@@ -73,7 +72,7 @@ class UserController extends Controller
 
         $user->update($request->only(['name', 'email', 'department_id', 'position', 'is_manager', 'is_admin', 'status']));
 
-        return response()->json($user);
+        return new UserResource($user);
     }
 
     public function destroy($id)
@@ -102,7 +101,7 @@ class UserController extends Controller
             ->whereNotIn('id', $excludeIds)
             ->get();
 
-        return response()->json($users);
+        return UserResource::collection($users);
     }
 
     public function import(Request $request)
@@ -123,6 +122,7 @@ class UserController extends Controller
 
             $successCount = 0;
             $failCount = 0;
+            $defaultPassword = Str::random(12);
 
             foreach ($lines as $line) {
                 $line = trim($line);
@@ -133,12 +133,12 @@ class UserController extends Controller
 
                 try {
                     $tenantId = $request->user()->tenant_id;
-                    
+
                     User::create([
                         'tenant_id' => $tenantId,
                         'name' => $data[0] ?? '',
                         'email' => $data[1] ?? '',
-                        'password' => bcrypt('123456'),
+                        'password' => bcrypt($defaultPassword),
                         'department_id' => isset($data[2]) && $data[2] !== '' ? (int)$data[2] : null,
                         'position' => $data[3] ?? '',
                         'is_manager' => isset($data[4]) && $data[4] === '1',
@@ -154,6 +154,7 @@ class UserController extends Controller
             return response()->json([
                 'success_count' => $successCount,
                 'fail_count' => $failCount,
+                'message' => $successCount > 0 ? '导入成功，初始密码为随机生成，请通过管理员重置' : '导入完成',
             ]);
         }
 

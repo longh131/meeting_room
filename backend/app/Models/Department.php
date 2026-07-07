@@ -11,7 +11,7 @@ class Department extends Model
 {
     use HasFactory, SoftDeletes, TenantAware;
 
-    protected $fillable = ['tenant_id', 'name', 'parent_id', 'code', 'status', 'sort_order'];
+    protected $fillable = ['tenant_id', 'name', 'parent_id', 'code', 'im_department_id', 'status', 'sort_order'];
 
     protected $casts = [
         'status' => 'boolean',

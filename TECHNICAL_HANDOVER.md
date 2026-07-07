@@ -851,6 +851,29 @@ php artisan migrate
 | `/api/approvals/{id}/reject` | POST | 审批拒绝 |
 | `/api/organization/sync` | POST | 同步组织架构 |
 | `/api/tenants/im-config` | GET/PUT | 获取/更新IM配置 |
+| `/api/booking-policy` | GET/PUT | 获取/更新预定规则（PUT 需 admin） |
+| `/api/reservations/calendar` | GET | 日历视图数据（start_date, end_date, meeting_room_id, my_only） |
+| `/api/reservations/{id}/reschedule` | PATCH | 拖拽改期（start_time, end_time） |
+| `/api/callback/bot/dingtalk?tenant_id=` | POST | 钉钉机器人指令回调 |
+| `/api/callback/bot/feishu?tenant_id=` | POST | 飞书机器人指令回调 |
+| `/api/message-templates` | GET | 消息模板列表（admin，首次访问自动初始化默认模板） |
+| `/api/message-templates/{id}` | PUT | 更新模板 |
+| `/api/message-templates/preview` | POST | 预览模板 |
+| `/api/message-templates/{id}/reset` | POST | 重置为默认 |
+| `/api/room-blackouts` | GET/POST | 维护时段列表/创建（admin） |
+| `/api/room-blackouts/{id}` | PUT/DELETE | 更新/删除维护时段 |
+| `/api/reports/heatmap` | GET | 预定热力图（hour × weekday） |
+| `/api/reports/utilization/export` | GET | 利用率 CSV 导出 |
+| `/api/reservations` POST 支持 | | `booked_for_user_id` 代预定（admin/同部门 manager） |
+| `/api/meeting-rooms/recommend` | POST | 智能推荐 Top3 会议室 |
+| `/api/waitlist` | GET/POST | 候补队列 |
+| `/api/waitlist/{id}/confirm` | POST | 确认候补转预定 |
+| `/api/credit/logs` | GET | 信用分明细 |
+| `/api/calendar/status` | GET | 日历同步状态 + ICS 订阅 URL |
+| `/api/calendar/feed/{token}.ics` | GET | 个人 ICS 日历订阅（无需登录） |
+| `/api/webhook-endpoints` | CRUD | Webhook 配置（admin） |
+| `/api/api-tokens` | GET/POST/DELETE | 开放 API Token（admin） |
+| `/api/open/v1/*` | | 开放 API（Bearer Token 认证） |
 | `/api/admin/tenants` | GET/POST | 租户列表/创建（超级管理员） |
 | `/api/admin/tenants/{id}` | GET/PUT/DELETE | 租户详情/更新/删除（超级管理员） |
 
@@ -938,9 +961,76 @@ IM_NOTIFICATION_CHANNEL=log
 | `2024_01_01_000015_add_wework_config_to_tenants.php` | 为租户添加企业微信配置字段 |
 | `2024_01_01_000015_add_access_code_to_meeting_rooms.php` | 为会议室添加access_code字段 |
 | `2024_01_01_000016_add_feishu_extra_fields.php` | 为租户添加飞书Verification Token和App Type字段 |
+| `2024_01_01_000017_add_approval_and_org_fields.php` | 审批实例ID、部门IM ID、钉钉回调字段 |
+| `2024_01_01_000018_add_composite_uniques.php` | 复合唯一索引、device_tags.tenant_id |
+| `2024_01_01_000019_create_jobs_table.php` | 队列 jobs / failed_jobs 表 |
+| `2024_01_01_000020_add_booking_policy_fields.php` | 租户预定规则、remind_sent、审批催办字段 |
+| `2024_01_01_000021_add_phase4_features.php` | message_templates、room_blackouts、booked_by_user_id |
+| `2024_01_01_000022_add_phase5_features.php` | 信用/候补/Webhook/API Token/日历同步 |
 
 ---
 
-**文档版本**：v1.1  
-**编写日期**：2026-07-03  
+### H. Phase 4 功能说明
+
+| 功能 | 说明 |
+|------|------|
+| 消息模板 | 管理员可编辑 8 类通知模板，变量 `{title}` `{room_name}` 等；NotificationService 自动渲染 |
+| 代预定 | admin 可为全租户用户代订；manager 可为同部门用户代订；审批走被代订人部门 |
+| 维护时段 | 管理员标记会议室不可预定时段，与长期禁用 status 区分；预定/改期自动校验 |
+| 报表热力图 | 8–21 点 × 周一至周日预定次数矩阵 |
+| H5 移动端 | 宽度 ≤768px 隐藏侧栏，底部 Tab：首页/日历/预定/我的/审批 |
+
+### K. Phase 5 功能说明
+
+| 功能 | 说明 |
+|------|------|
+| 日历同步 | 个人 ICS 订阅链接；可选 Google/Outlook OAuth 双向推送（需配置 CLIENT_ID） |
+| 智能推荐 | 按收藏、历史、容量匹配推荐 Top3 空闲会议室 |
+| 候补队列 | 时段已满可排队；释放/取消后通知，限时确认转预定 |
+| 开放 API | `/api/open/v1/`，租户 API Token 认证 |
+| Webhook | 预定创建/取消/签到/爽约事件 HTTP 推送，HMAC 签名 |
+| 信用体系 | 爽约扣分、签到加分、低于阈值限制预定，明细可查 |
+
+**开放 API 示例：**
+```bash
+curl -H "Authorization: Bearer {prefix}.{secret}" \
+  https://meeting.sisuu.com/api/open/v1/meeting-rooms
+```
+
+**日历 OAuth 环境变量（可选）：**
+```env
+GOOGLE_CALENDAR_CLIENT_ID=
+GOOGLE_CALENDAR_CLIENT_SECRET=
+MICROSOFT_CALENDAR_CLIENT_ID=
+MICROSOFT_CALENDAR_CLIENT_SECRET=
+```
+
+**定时任务：** `waitlist:expire` 每分钟处理过期候补
+
+---
+
+### I. Phase 3 定时任务
+
+| 命令 | 调度 | 说明 |
+|------|------|------|
+| `reservations:release-no-show` | 每 5 分钟 | 未签到超时自动释放会议室 |
+| `reservations:send-reminders` | 每分钟 | 会前提醒（按租户 meeting_remind_minutes） |
+| `approvals:remind-pending` | 每小时 | 待审批催办（按 approval_remind_hours / max_reminds） |
+
+需确保 `php artisan schedule:run` 已加入 crontab，且 `QUEUE_CONNECTION=database` 时 Supervisor 已启动 queue worker。
+
+### J. IM 机器人指令（钉钉/飞书）
+
+用户在 IM 中 @机器人 可发送：
+
+- `帮助` / `help` — 指令说明
+- `查空闲 会议室名 14:00-15:00` — 查询空闲
+- `今日会议` — 查看今日预定
+
+回调地址：`POST /api/callback/bot/dingtalk?tenant_id={租户ID}` 或 `/api/callback/bot/feishu?tenant_id={租户ID}`
+
+---
+
+**文档版本**：v1.4  
+**编写日期**：2026-07-07  
 **编写人**：系统开发团队

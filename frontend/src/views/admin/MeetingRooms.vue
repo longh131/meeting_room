@@ -78,7 +78,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from '@/utils/axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 
@@ -107,8 +107,8 @@ const fetchRooms = () => {
       per_page: pageSize.value
     }
   }).then(res => {
-    rooms.value = res.data
-    total.value = res.total
+    rooms.value = Array.isArray(res) ? res : (res.data || [])
+    total.value = res.total || res.meta?.total || rooms.value.length
   })
 }
 
@@ -127,7 +127,7 @@ const editRoom = (row) => {
 }
 
 const deleteRoom = (row) => {
-  ElMessage.confirm('确定删除该会议室？', '提示', {
+  ElMessageBox.confirm('确定删除该会议室？', '提示', {
     type: 'warning'
   }).then(() => {
     axios.delete(`/meeting-rooms/${row.id}`).then(() => {

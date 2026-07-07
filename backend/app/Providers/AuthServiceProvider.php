@@ -3,13 +3,14 @@
 namespace App\Providers;
 
 use App\Models\Reservation;
+use App\Policies\ReservationPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
-        //
+        Reservation::class => ReservationPolicy::class,
     ];
 
     public function boot()
@@ -20,8 +21,8 @@ class AuthServiceProvider extends ServiceProvider
             return $user->is_admin;
         });
 
-        Gate::define('update', function ($user, $reservation) {
-            return $user->id === $reservation->user_id || $user->is_admin;
+        Gate::define('manager', function ($user) {
+            return $user->is_admin || $user->is_manager;
         });
     }
 }

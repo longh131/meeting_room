@@ -15,11 +15,14 @@ class Approval extends Model
     const STATUS_REJECTED = 2;
 
     protected $fillable = [
-        'tenant_id', 'reservation_id', 'approver_id', 'status', 'comment', 'approved_at', 'callback_url'
+        'tenant_id', 'reservation_id', 'approver_id', 'status', 'comment',
+        'approved_at', 'callback_url', 'process_instance_id',
+        'remind_count', 'last_reminded_at',
     ];
 
     protected $casts = [
         'approved_at' => 'datetime',
+        'last_reminded_at' => 'datetime',
     ];
 
     public function reservation()

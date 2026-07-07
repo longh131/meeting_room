@@ -16,15 +16,6 @@
           <el-button type="primary" @click="handleLogin" class="login-btn">登录</el-button>
         </el-form-item>
       </el-form>
-      <div class="test-accounts">
-        <p>测试账号：</p>
-        <ul>
-          <li>超级管理员: super@admin.com / 123456</li>
-          <li>租户1管理员: admin@demo.com / 123456</li>
-          <li>租户2管理员: admin@inno.com / 123456</li>
-          <li>租户1用户: zhangsan@demo.com / 123456</li>
-        </ul>
-      </div>
     </div>
   </div>
 </template>

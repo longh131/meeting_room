@@ -19,9 +19,10 @@ class Reservation extends Model
     const STATUS_CANCELLED = 5;
 
     protected $fillable = [
-        'tenant_id', 'meeting_room_id', 'user_id', 'title', 'description', 'start_time', 'end_time',
-        'status', 'repeat_type', 'repeat_end_date', 'repeat_count', 'parent_id',
-        'need_approval', 'qr_code', 'checkin_time', 'actual_attendees', 'is_extended'
+        'tenant_id', 'meeting_room_id', 'user_id', 'booked_by_user_id',
+        'google_event_id', 'outlook_event_id', 'title', 'description', 'start_time', 'end_time',
+        'repeat_type', 'repeat_end_date', 'repeat_count', 'parent_id',
+        'need_approval', 'qr_code', 'checkin_time', 'actual_attendees', 'is_extended', 'remind_sent'
     ];
 
     protected $casts = [
@@ -29,6 +30,7 @@ class Reservation extends Model
         'end_time' => 'datetime',
         'repeat_end_date' => 'date',
         'checkin_time' => 'datetime',
+        'remind_sent' => 'array',
     ];
 
     public function meetingRoom()
@@ -39,6 +41,11 @@ class Reservation extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function bookedBy()
+    {
+        return $this->belongsTo(User::class, 'booked_by_user_id');
     }
 
     public function attendees()

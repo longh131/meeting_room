@@ -14,6 +14,10 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('reservations:close-expired')->everyMinute();
+        $schedule->command('reservations:release-no-show')->everyFiveMinutes();
+        $schedule->command('reservations:send-reminders')->everyMinute();
+        $schedule->command('approvals:remind-pending')->hourly();
+        $schedule->command('waitlist:expire')->everyMinute();
         $schedule->command('tenants:deactivate-expired')->daily();
         
         // 每天凌晨2点全量同步组织架构

@@ -45,5 +45,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'super_admin' => \App\Http\Middleware\SuperAdmin::class,
         'check.tenant' => \App\Http\Middleware\CheckTenantStatus::class,
+        'tenant_api' => \App\Http\Middleware\AuthenticateTenantApiToken::class,
     ];
 }

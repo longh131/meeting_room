@@ -10,35 +10,8 @@ use Illuminate\Support\Facades\Log;
  * 钉钉IM服务实现
  * 支持多租户架构，每个租户独立配置钉钉应用
  */
-class DingtalkService implements IMService
+class DingtalkService extends AbstractIMService
 {
-    protected $tenantId;
-    protected $tenant;
-    protected $accessToken;
-    protected $tokenExpiresAt;
-
-    /**
-     * 设置当前租户
-     */
-    public function setTenant(int $tenantId): void
-    {
-        $this->tenantId = $tenantId;
-        $this->tenant = Tenant::find($tenantId);
-        $this->accessToken = null;
-        $this->tokenExpiresAt = 0;
-    }
-
-    /**
-     * 获取当前租户ID
-     */
-    public function getTenantId(): ?int
-    {
-        return $this->tenantId;
-    }
-
-    /**
-     * 检查租户是否启用了钉钉服务
-     */
     public function isEnabled(): bool
     {
         if (!$this->tenant) {
@@ -58,8 +31,8 @@ class DingtalkService implements IMService
             throw new \Exception('未设置租户');
         }
 
-        if ($this->accessToken && time() < $this->tokenExpiresAt) {
-            return $this->accessToken;
+        if ($cached = $this->getCachedToken()) {
+            return $cached;
         }
 
         try {
@@ -71,8 +44,7 @@ class DingtalkService implements IMService
             $result = $response->json();
 
             if ($result['errcode'] == 0) {
-                $this->accessToken = $result['access_token'];
-                $this->tokenExpiresAt = time() + $result['expires_in'] - 60;
+                $this->cacheToken($result['access_token'], $result['expires_in']);
                 return $this->accessToken;
             }
 
@@ -265,9 +237,8 @@ class DingtalkService implements IMService
             ];
 
             $response = Http::post(
-                'https://oapi.dingtalk.com/topapi/processinstance/create',
-                $data,
-                ['headers' => ['Content-Type' => 'application/json']]
+                'https://oapi.dingtalk.com/topapi/processinstance/create?access_token=' . $this->getAccessToken(),
+                $data
             );
 
             $result = $response->json();
@@ -333,9 +304,8 @@ class DingtalkService implements IMService
             ];
 
             $response = Http::post(
-                'https://oapi.dingtalk.com/topapi/message/corpconversation/asyncsend_v2',
-                $data,
-                ['headers' => ['Content-Type' => 'application/json']]
+                'https://oapi.dingtalk.com/topapi/message/corpconversation/asyncsend_v2?access_token=' . $this->getAccessToken(),
+                $data
             );
 
             $result = $response->json();
@@ -377,7 +347,7 @@ class DingtalkService implements IMService
             $nonceStr = uniqid();
             $timestamp = time();
 
-            $signature = $this->generateSignature($ticket, $nonceStr, $timestamp, $url);
+            $signature = $this->generateJsSignature($ticket, $nonceStr, $timestamp, $url);
 
             return [
                 'corpId' => $this->tenant->dingtalk_corp_id,
@@ -391,14 +361,5 @@ class DingtalkService implements IMService
             Log::error('[Dingtalk] 租户' . $this->tenantId . 'getJsApiConfig异常: ' . $e->getMessage());
             return [];
         }
-    }
-
-    /**
-     * 生成签名
-     */
-    protected function generateSignature(string $ticket, string $nonceStr, int $timestamp, string $url): string
-    {
-        $plainText = "jsapi_ticket={$ticket}&noncestr={$nonceStr}&timestamp={$timestamp}&url={$url}";
-        return sha1($plainText);
     }
 }

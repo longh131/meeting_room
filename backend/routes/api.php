@@ -17,6 +17,16 @@ use App\Http\Controllers\AdminReportController;
 use App\Http\Controllers\OAuthController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ApprovalCallbackController;
+use App\Http\Controllers\BookingPolicyController;
+use App\Http\Controllers\IMBotController;
+use App\Http\Controllers\MessageTemplateController;
+use App\Http\Controllers\RoomBlackoutController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\WaitlistController;
+use App\Http\Controllers\CreditController;
+use App\Http\Controllers\WebhookEndpointController;
+use App\Http\Controllers\TenantApiTokenController;
+use App\Http\Controllers\OpenApiController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -40,7 +50,21 @@ Route::post('/callback/approval/feishu', [ApprovalCallbackController::class, 'fe
 Route::post('/callback/approval/wework', [ApprovalCallbackController::class, 'weworkCallback']);
 Route::get('/callback/verify', [ApprovalCallbackController::class, 'verify']);
 
-Route::get('/pad/{id}', [MeetingRoomController::class, 'padDisplay']);
+Route::post('/callback/bot/dingtalk', [IMBotController::class, 'dingtalk']);
+Route::post('/callback/bot/feishu', [IMBotController::class, 'feishu']);
+
+Route::get('/calendar/feed/{token}.ics', [CalendarController::class, 'feed']);
+Route::get('/calendar/callback/google', [CalendarController::class, 'googleCallback']);
+Route::get('/calendar/callback/outlook', [CalendarController::class, 'outlookCallback']);
+
+Route::prefix('open/v1')->middleware('tenant_api')->group(function () {
+    Route::get('/meeting-rooms', [OpenApiController::class, 'meetingRooms']);
+    Route::get('/reservations', [OpenApiController::class, 'reservations']);
+    Route::post('/reservations', [OpenApiController::class, 'createReservation']);
+    Route::delete('/reservations/{id}', [OpenApiController::class, 'cancelReservation']);
+});
+
+Route::get('/pad/{accessCode}', [MeetingRoomController::class, 'padDisplay']);
 Route::post('/pad/checkin/{roomCode}', [MeetingRoomController::class, 'padCheckin']);
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -51,15 +75,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/meeting-rooms', [MeetingRoomController::class, 'index']);
         Route::get('/meeting-rooms/floors', [MeetingRoomController::class, 'getFloors']);
         Route::post('/meeting-rooms/check-availability', [MeetingRoomController::class, 'checkAvailability']);
+        Route::post('/meeting-rooms/recommend', [MeetingRoomController::class, 'recommend']);
         Route::get('/meeting-rooms/{id}', [MeetingRoomController::class, 'show']);
         Route::post('/meeting-rooms', [MeetingRoomController::class, 'store']);
         Route::put('/meeting-rooms/{id}', [MeetingRoomController::class, 'update']);
         Route::delete('/meeting-rooms/{id}', [MeetingRoomController::class, 'destroy']);
 
+        Route::get('/reservations/calendar', [ReservationController::class, 'calendar']);
         Route::get('/reservations', [ReservationController::class, 'index']);
         Route::get('/reservations/{id}', [ReservationController::class, 'show']);
         Route::post('/reservations', [ReservationController::class, 'store']);
         Route::put('/reservations/{id}', [ReservationController::class, 'update']);
+        Route::patch('/reservations/{id}/reschedule', [ReservationController::class, 'reschedule']);
         Route::delete('/reservations/{id}', [ReservationController::class, 'destroy']);
         Route::post('/reservations/{id}/checkin', [ReservationController::class, 'checkin']);
         Route::post('/reservations/{id}/checkout', [ReservationController::class, 'checkout']);
@@ -80,6 +107,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/department-ranking', [ReportController::class, 'departmentRanking']);
         Route::get('/reports/no-show-rate', [ReportController::class, 'noShowRate']);
         Route::get('/reports/overview', [ReportController::class, 'overview']);
+        Route::get('/reports/heatmap', [ReportController::class, 'heatmap']);
+        Route::get('/reports/utilization/export', [ReportController::class, 'exportUtilization']);
+
+        Route::get('/message-templates', [MessageTemplateController::class, 'index']);
+        Route::put('/message-templates/{id}', [MessageTemplateController::class, 'update']);
+        Route::post('/message-templates/preview', [MessageTemplateController::class, 'preview']);
+        Route::post('/message-templates/{id}/reset', [MessageTemplateController::class, 'reset']);
+
+        Route::get('/room-blackouts', [RoomBlackoutController::class, 'index']);
+        Route::post('/room-blackouts', [RoomBlackoutController::class, 'store']);
+        Route::put('/room-blackouts/{id}', [RoomBlackoutController::class, 'update']);
+        Route::delete('/room-blackouts/{id}', [RoomBlackoutController::class, 'destroy']);
 
         Route::get('/users', [UserController::class, 'index']);
         Route::post('/users', [UserController::class, 'store']);
@@ -103,6 +142,30 @@ Route::middleware('auth:sanctum')->group(function () {
         // IM配置路由（租户管理员）
         Route::get('/tenants/im-config', [TenantController::class, 'getIMConfig']);
         Route::put('/tenants/im-config', [TenantController::class, 'updateIMConfig']);
+
+        Route::get('/booking-policy', [BookingPolicyController::class, 'show']);
+        Route::put('/booking-policy', [BookingPolicyController::class, 'update']);
+
+        Route::get('/calendar/status', [CalendarController::class, 'status']);
+        Route::delete('/calendar/disconnect/{provider}', [CalendarController::class, 'disconnect']);
+        Route::post('/calendar/regenerate-feed', [CalendarController::class, 'regenerateFeed']);
+
+        Route::get('/waitlist', [WaitlistController::class, 'index']);
+        Route::post('/waitlist', [WaitlistController::class, 'store']);
+        Route::post('/waitlist/{id}/confirm', [WaitlistController::class, 'confirm']);
+        Route::delete('/waitlist/{id}', [WaitlistController::class, 'destroy']);
+
+        Route::get('/credit/logs', [CreditController::class, 'myLogs']);
+
+        Route::get('/webhook-endpoints', [WebhookEndpointController::class, 'index']);
+        Route::post('/webhook-endpoints', [WebhookEndpointController::class, 'store']);
+        Route::put('/webhook-endpoints/{id}', [WebhookEndpointController::class, 'update']);
+        Route::delete('/webhook-endpoints/{id}', [WebhookEndpointController::class, 'destroy']);
+        Route::post('/webhook-endpoints/{id}/regenerate-secret', [WebhookEndpointController::class, 'regenerateSecret']);
+
+        Route::get('/api-tokens', [TenantApiTokenController::class, 'index']);
+        Route::post('/api-tokens', [TenantApiTokenController::class, 'store']);
+        Route::delete('/api-tokens/{id}', [TenantApiTokenController::class, 'destroy']);
     });
 
     Route::prefix('admin')->middleware('super_admin')->group(function () {

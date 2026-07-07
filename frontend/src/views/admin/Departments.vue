@@ -51,7 +51,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from '@/utils/axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const departments = ref([])
 const showAddModal = ref(false)
@@ -75,7 +75,7 @@ const editDepartment = (row) => {
 }
 
 const deleteDepartment = (row) => {
-  ElMessage.confirm('确定删除该部门？', '提示', {
+  ElMessageBox.confirm('确定删除该部门？', '提示', {
     type: 'warning'
   }).then(() => {
     axios.delete(`/departments/${row.id}`).then(() => {

@@ -177,8 +177,8 @@ const statusClass = computed(() => {
 const fetchPadData = async () => {
   try {
     loading.value = true
-    const id = route.params.id
-    const response = await axios.get(`/pad/${id}`, { noAuth: true })
+    const accessCode = route.params.accessCode
+    const response = await axios.get(`/pad/${accessCode}`, { noAuth: true })
     padData.value = response
     loading.value = false
     await nextTick()

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Traits\EncryptsImSecrets;
 
 class Tenant extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, EncryptsImSecrets;
 
     protected $fillable = [
         'name', 'domain', 'contact_name', 'contact_phone', 'contact_email',
@@ -16,6 +17,7 @@ class Tenant extends Model
         // 钉钉配置
         'dingtalk_enabled', 'dingtalk_app_key', 'dingtalk_app_secret',
         'dingtalk_corp_id', 'dingtalk_agent_id', 'dingtalk_process_code',
+        'dingtalk_callback_token', 'dingtalk_callback_aes_key',
         // 飞书配置
         'feishu_enabled', 'feishu_app_id', 'feishu_app_secret', 'feishu_verification_token', 'feishu_app_type', 'feishu_approval_code',
         // 企业微信配置
@@ -23,6 +25,11 @@ class Tenant extends Model
         'wework_agent_id', 'wework_token', 'wework_encoding_aes_key', 'wework_approval_code',
         // IM通知渠道
         'im_notification_channel',
+        'max_duration_minutes', 'max_advance_days', 'min_advance_minutes',
+        'max_daily_bookings_per_user', 'booking_start_hour', 'booking_end_hour',
+        'no_show_grace_minutes', 'no_show_deduct_credit', 'meeting_remind_minutes',
+        'approval_remind_hours', 'approval_max_reminds',
+        'credit_min_threshold', 'credit_checkin_bonus', 'waitlist_confirm_minutes',
     ];
 
     protected $casts = [

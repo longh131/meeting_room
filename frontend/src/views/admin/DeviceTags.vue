@@ -56,7 +56,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from '@/utils/axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const tags = ref([])
 const currentPage = ref(1)
@@ -88,7 +88,7 @@ const editTag = (row) => {
 }
 
 const deleteTag = (row) => {
-  ElMessage.confirm('确定删除该标签？', '提示', {
+  ElMessageBox.confirm('确定删除该标签？', '提示', {
     type: 'warning'
   }).then(() => {
     axios.delete(`/device-tags/${row.id}`).then(() => {

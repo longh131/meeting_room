@@ -3,6 +3,7 @@
     <div class="sidebar-header">
       <h1>会议室系统</h1>
     </div>
+    <div class="sidebar-nav">
     <el-menu :default-active="activeMenu" mode="vertical" class="sidebar-menu" @select="handleMenuSelect">
       <template v-if="!isSuperAdmin">
         <el-menu-item index="/">
@@ -13,9 +14,17 @@
           <template #icon><component :is="icons.layout" /></template>
           工作台
         </el-menu-item>
+        <el-menu-item index="/calendar">
+          <template #icon><component :is="icons.grid" /></template>
+          日历视图
+        </el-menu-item>
         <el-menu-item index="/meeting-rooms">
           <template #icon><component :is="icons.building" /></template>
           会议室列表
+        </el-menu-item>
+        <el-menu-item index="/waitlist">
+          <template #icon><component :is="icons.clock" /></template>
+          我的候补
         </el-menu-item>
         <el-menu-item index="/reservations">
           <template #icon><component :is="icons.calendar" /></template>
@@ -41,6 +50,11 @@
             <el-menu-item index="/admin/departments">部门管理</el-menu-item>
             <el-menu-item index="/admin/meeting-rooms">会议室管理</el-menu-item>
             <el-menu-item index="/admin/device-tags">设备标签</el-menu-item>
+            <el-menu-item index="/admin/api-tokens">开放 API</el-menu-item>
+            <el-menu-item index="/admin/webhooks">Webhook</el-menu-item>
+            <el-menu-item index="/admin/booking-policy">预定规则</el-menu-item>
+            <el-menu-item index="/admin/message-templates">消息模板</el-menu-item>
+            <el-menu-item index="/admin/room-blackouts">维护时段</el-menu-item>
             <el-menu-item index="/admin/im-config">IM配置</el-menu-item>
           </el-sub-menu>
         </template>
@@ -60,6 +74,7 @@
         </el-menu-item>
       </template>
     </el-menu>
+    </div>
   </aside>
 </template>
 
@@ -68,6 +83,8 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 import {
+  Grid as grid,
+  Clock as clock,
   HomeFilled as home,
   PieChart as layout,
   OfficeBuilding as building,
@@ -84,6 +101,8 @@ const route = useRoute()
 const store = useStore()
 
 const icons = {
+  grid,
+  clock,
   home,
   layout,
   building,
@@ -117,11 +136,36 @@ const handleMenuSelect = (index) => {
   left: 0;
   top: 0;
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .sidebar-header {
   padding: 20px;
   border-bottom: 1px solid #374151;
+  flex-shrink: 0;
+}
+
+.sidebar-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 16px;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .sidebar-header h1 {

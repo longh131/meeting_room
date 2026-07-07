@@ -6,119 +6,169 @@
     <title>钉钉对接配置说明</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.8; padding: 40px; }
-        .container { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-        h1 { text-align: center; color: #1677ff; margin-bottom: 30px; font-size: 28px; }
-        h2 { color: #1677ff; margin: 30px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #1677ff; font-size: 20px; }
-        h3 { color: #333; margin: 20px 0 10px; font-size: 16px; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { border: 1px solid #e8e8e8; padding: 12px 15px; text-align: left; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.85; padding: 24px; }
+        .container { max-width: 920px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 36px 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        h1 { text-align: center; color: #1677ff; margin-bottom: 8px; font-size: 26px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 28px; font-size: 14px; }
+        h2 { color: #1677ff; margin: 32px 0 14px; padding-bottom: 8px; border-bottom: 2px solid #1677ff; font-size: 19px; }
+        h3 { color: #333; margin: 18px 0 10px; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+        th, td { border: 1px solid #e8e8e8; padding: 11px 14px; text-align: left; vertical-align: top; }
         th { background: #f0f5ff; color: #1677ff; font-weight: 600; }
-        td:first-child { font-weight: 600; width: 160px; }
-        ol { margin: 10px 0 10px 20px; }
-        li { margin: 10px 0; }
-        a { color: #1677ff; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .note { background: #fffbe6; border-left: 4px solid #faad14; padding: 12px 16px; margin: 15px 0; border-radius: 4px; }
-        .tip { background: #f0f5ff; border-left: 4px solid #1677ff; padding: 12px 16px; margin: 15px 0; border-radius: 4px; }
-        .step-num { display: inline-block; background: #1677ff; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 8px; font-size: 14px; }
-        code { background: #f5f5f5; padding: 2px 8px; border-radius: 4px; font-size: 14px; word-break: break-all; }
-        strong { color: #333; }
+        ol, ul { margin: 8px 0 8px 22px; }
+        li { margin: 8px 0; }
+        a { color: #1677ff; }
+        .note { background: #fffbe6; border-left: 4px solid #faad14; padding: 12px 16px; margin: 14px 0; border-radius: 4px; font-size: 14px; }
+        .tip { background: #f0f5ff; border-left: 4px solid #1677ff; padding: 12px 16px; margin: 14px 0; border-radius: 4px; font-size: 14px; }
+        .ok { background: #f6ffed; border-left: 4px solid #52c41a; padding: 12px 16px; margin: 14px 0; border-radius: 4px; font-size: 14px; }
+        .step-num { display: inline-block; background: #1677ff; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 8px; font-size: 13px; }
+        code { background: #f5f5f5; padding: 2px 8px; border-radius: 4px; font-size: 13px; word-break: break-all; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 6px; }
+        .required { background: #fff1f0; color: #cf1322; border: 1px solid #ffa39e; }
+        .optional { background: #f5f5f5; color: #666; border: 1px solid #d9d9d9; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📋 钉钉对接配置说明</h1>
+        <h1>钉钉对接配置说明</h1>
+        <p class="subtitle">按本文操作后，员工可在签到页用钉钉扫码登录，系统可推送工作消息、同步通讯录（需权限），并对接 OA 审批（可选）</p>
 
         <div class="tip">
-            💡 <strong>重要提示：</strong>本配置需要用到两个后台，请使用<strong>同一个钉钉管理员账号</strong>登录操作。
+            <strong>开始前准备：</strong><br>
+            1. 使用<strong>钉钉企业管理员</strong>账号操作（创建应用、开权限都要管理员）<br>
+            2. 在 IM 配置页顶部记下你的<strong>租户 ID</strong>（下文用 <code>{租户ID}</code> 表示，例如 <code>1</code>）<br>
+            3. 系统访问地址固定为 <code>https://meeting.sisuu.com</code>
         </div>
 
-        <h2>一、两个后台地址</h2>
+        <h2>一、配置完成后能实现什么</h2>
         <table>
-            <tr><th>后台名称</th><th>地址</th><th>用途</th></tr>
-            <tr><td><strong>钉钉开发者后台</strong></td><td><a href="https://open.dingtalk.com/" target="_blank">https://open.dingtalk.com/</a></td><td>创建应用、获取凭证、配置权限和回调</td></tr>
-            <tr><td><strong>钉钉管理后台</strong></td><td><a href="https://oa.dingtalk.com/" target="_blank">https://oa.dingtalk.com/</a></td><td>管理企业信息、OA审批、发布应用</td></tr>
+            <tr><th>功能</th><th>需要填哪些项</th></tr>
+            <tr><td>会议室 PAD / 签到页「钉钉登录」</td><td>CorpId、AppKey、AppSecret、AgentId（并配置重定向 URL）</td></tr>
+            <tr><td>预定成功、审批结果等工作消息</td><td>同上 + 通知设置选「钉钉工作消息」+ 通讯录权限</td></tr>
+            <tr><td>预定走钉钉 OA 审批</td><td>再加：审批流程 Code、事件回调 Token/AESKey</td></tr>
+            <tr><td>群机器人查会议室（可选）</td><td>事件回调 Token/AESKey + 机器人回调地址</td></tr>
         </table>
 
-        <h2>二、需要提供的凭证信息</h2>
+        <h2>二、IM 配置页字段对照（填什么、从哪来）</h2>
         <table>
-            <tr><th>参数</th><th>说明</th><th>获取位置</th></tr>
-            <tr><td>CorpId</td><td>企业唯一标识</td><td><a href="https://oa.dingtalk.com/" target="_blank">管理后台</a> → 首页 → 企业信息</td></tr>
-            <tr><td>AppKey</td><td>应用标识</td><td><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → 应用凭证</td></tr>
-            <tr><td>AppSecret</td><td>应用密钥</td><td><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → 应用凭证</td></tr>
-            <tr><td>AgentId</td><td>应用编号</td><td><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情</td></tr>
-            <tr><td>审批流程Code</td><td>审批模板编码</td><td><a href="https://oa.dingtalk.com/" target="_blank">管理后台</a> → 工作台 → OA审批 → 模板详情</td></tr>
+            <tr><th>本系统字段</th><th>是否必填</th><th>在钉钉哪里找</th></tr>
+            <tr>
+                <td>钉钉企业 CorpId</td>
+                <td><span class="tag required">必填</span></td>
+                <td><a href="https://oa.dingtalk.com/" target="_blank">钉钉管理后台</a> → 设置 → 企业信息 → <strong>CorpId</strong></td>
+            </tr>
+            <tr>
+                <td>应用 AppKey</td>
+                <td><span class="tag required">必填</span></td>
+                <td><a href="https://open-dev.dingtalk.com/" target="_blank">钉钉开放平台</a> → 应用开发 → 企业内部应用 → 你的应用 → <strong>凭证与基础信息</strong> → AppKey（或 Client ID，填到 AppKey 栏）</td>
+            </tr>
+            <tr>
+                <td>应用 AppSecret</td>
+                <td><span class="tag required">必填</span></td>
+                <td>同上 → AppSecret（或 Client Secret），点击「查看」后复制</td>
+            </tr>
+            <tr>
+                <td>应用 AgentId</td>
+                <td><span class="tag required">必填</span></td>
+                <td>应用详情页 → <strong>AgentId</strong>（纯数字）</td>
+            </tr>
+            <tr>
+                <td>审批流程 Code</td>
+                <td><span class="tag optional">选填</span></td>
+                <td>只有「预定需钉钉审批」才填。管理后台 → 工作台 → OA审批 → 模板详情 URL 里 <code>processCode=PROC-xxxx</code> 的值</td>
+            </tr>
+            <tr>
+                <td>回调 Token</td>
+                <td><span class="tag optional">配回调时必填</span></td>
+                <td>在开放平台「事件订阅」里<strong>自己设定</strong>一串字符，钉钉和本系统填<strong>完全相同</strong>的值</td>
+            </tr>
+            <tr>
+                <td>回调 EncodingAESKey</td>
+                <td><span class="tag optional">配回调时必填</span></td>
+                <td>事件订阅里点「生成 EncodingAESKey」，复制到钉钉和本系统（两边一致）</td>
+            </tr>
         </table>
 
-        <h2>三、操作步骤</h2>
+        <h2>三、在钉钉开放平台创建应用</h2>
 
-        <h3><span class="step-num">1</span> 登录钉钉开发者后台</h3>
-        <p>访问 <a href="https://open.dingtalk.com/" target="_blank">https://open.dingtalk.com/</a>，使用钉钉管理员账号扫码登录。</p>
-
-        <h3><span class="step-num">2</span> 创建企业内部应用</h3>
+        <h3><span class="step-num">1</span> 登录并创建应用</h3>
         <ol>
-            <li>点击左侧菜单 <strong>应用开发</strong> → <strong>企业内部应用</strong></li>
-            <li>点击 <strong>创建应用</strong></li>
-            <li>填写信息：<strong>应用名称</strong>（如：会议预定）、<strong>应用描述</strong>、<strong>上传图标</strong></li>
-            <li>点击 <strong>确定创建</strong></li>
+            <li>打开 <a href="https://open-dev.dingtalk.com/" target="_blank">钉钉开放平台</a>（旧版入口 <a href="https://open.dingtalk.com/" target="_blank">open.dingtalk.com</a> 也会跳转）</li>
+            <li>进入 <strong>应用开发</strong> → <strong>企业内部应用</strong> → <strong>创建应用</strong></li>
+            <li>名称建议：会议室预定；上传图标；创建完成后进入应用详情</li>
         </ol>
 
-        <h3><span class="step-num">3</span> 获取 AppKey 和 AppSecret</h3>
+        <h3><span class="step-num">2</span> 复制 AppKey、AppSecret、AgentId</h3>
+        <p>在应用详情 → <strong>凭证与基础信息</strong>，把三项复制到 IM 配置页对应输入框。</p>
+
+        <h3><span class="step-num">3</span> 配置重定向 URL（扫码登录必做）</h3>
+        <p>在应用详情 → <strong>开发配置</strong> → <strong>安全设置</strong>（或「登录与分享」），添加以下重定向/回调地址（域名需为 <code>meeting.sisuu.com</code>）：</p>
+        <ul>
+            <li>Web 登录回调：<code>https://meeting.sisuu.com/api/oauth/callback/dingtalk?tenant_id={租户ID}</code></li>
+            <li>签到页回调（可填前缀或通配）：<code>https://meeting.sisuu.com/checkin/</code></li>
+        </ul>
+        <div class="note">员工扫 PAD 二维码签到时，会跳转到 <code>/checkin/...</code> 页面，所以这条地址必须加白名单，否则扫码后报「redirect_uri 不合法」。</div>
+
+        <h3><span class="step-num">4</span> 申请接口权限</h3>
+        <p>应用详情 → <strong>权限管理</strong> → 搜索并开通（名称可能略有差异，按关键字搜）：</p>
+        <ul>
+            <li><strong>通讯录</strong>：部门信息读、成员信息读、成员详情读</li>
+            <li><strong>根据手机号获取成员基本信息</strong>（用于账号与钉钉用户自动匹配）</li>
+            <li><strong>工作通知</strong> / 企业会话消息发送（发预定提醒、审批通知）</li>
+            <li><strong>OA 审批</strong>：审批实例写、审批实例读（仅在使用钉钉审批时）</li>
+        </ul>
+        <p>申请后需企业管理员在管理后台 <strong>同意授权</strong>，权限才会生效。</p>
+
+        <h3><span class="step-num">5</span> 配置事件订阅（使用 OA 审批时必做）</h3>
         <ol>
-            <li>在应用详情页，点击 <strong>应用凭证</strong></li>
-            <li>复制 <strong>AppKey</strong></li>
-            <li>点击 AppSecret 后的 <strong>"查看"</strong>，扫码验证后复制</li>
+            <li>应用详情 → <strong>事件订阅</strong>（或「事件与回调」）</li>
+            <li>请求网址 URL 填：<br><code>https://meeting.sisuu.com/api/callback/approval/dingtalk?tenant_id={租户ID}</code></li>
+            <li>设置 <strong>Token</strong> 和 <strong>EncodingAESKey</strong>（可点自动生成）</li>
+            <li>把相同的 Token、EncodingAESKey 填回本系统 IM 配置页</li>
+            <li>订阅事件：勾选 <strong>审批实例状态变更</strong>（bpms_instance_change 等审批相关事件）</li>
+            <li>保存并验证 URL 通过</li>
         </ol>
 
-        <h3><span class="step-num">4</span> 获取 CorpId</h3>
-        <p>访问 <a href="https://oa.dingtalk.com/" target="_blank">https://oa.dingtalk.com/</a>（管理后台），在页面顶部或 <strong>企业信息</strong> 中，复制 <strong>CorpId</strong>。</p>
-
-        <h3><span class="step-num">5</span> 获取 AgentId</h3>
-        <p>回到 <a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情页，在 <strong>AgentId</strong> 字段处直接复制。</p>
-
-        <h3><span class="step-num">6</span> 创建审批模板并获取流程Code</h3>
+        <h3><span class="step-num">6</span> 创建 OA 审批模板（可选）</h3>
         <ol>
-            <li>访问 <a href="https://oa.dingtalk.com/" target="_blank">https://oa.dingtalk.com/</a>（管理后台）</li>
-            <li>点击 <strong>工作台</strong> → <strong>OA审批</strong></li>
-            <li>点击 <strong>创建新模板</strong>，选择 <strong>"自定义模板"</strong></li>
-            <li>设计审批表单（可参考下方建议字段），保存并发布</li>
-            <li>进入模板详情页，查看浏览器地址栏 URL，复制 <code>processCode=</code> 后面的值</li>
+            <li><a href="https://oa.dingtalk.com/" target="_blank">钉钉管理后台</a> → 工作台 → OA审批 → 创建自定义模板</li>
+            <li>发布模板后，从浏览器地址栏复制 <code>processCode=</code> 后面的值（形如 <code>PROC-XXXX</code>）</li>
+            <li>填到 IM 配置页「审批流程 Code」</li>
         </ol>
-        <div class="note">
-            📌 <strong>获取 processCode 技巧：</strong>如果详情页没有直接显示，看浏览器地址栏 URL，格式为 <code>...?processCode=PROC-XXXXX</code>，复制 <code>PROC-XXXXX</code> 部分即可。
+
+        <h3><span class="step-num">7</span> 发布应用</h3>
+        <ol>
+            <li>开放平台 → 应用详情 → <strong>版本管理与发布</strong></li>
+            <li>创建版本并发布，可见范围选 <strong>全部员工</strong></li>
+        </ol>
+
+        <h2>四、在本系统保存配置</h2>
+        <ol>
+            <li>打开 <a href="/admin/im-config">IM 配置</a> → <strong>钉钉</strong> 标签</li>
+            <li>打开「启用」开关</li>
+            <li>按上表填写各项 → 点击 <strong>保存配置</strong></li>
+            <li>切换到 <strong>通知设置</strong>，若要用钉钉发消息，默认通知渠道选「钉钉工作消息」并保存</li>
+        </ol>
+
+        <h2>五、验证是否成功</h2>
+        <table>
+            <tr><th>检查项</th><th>怎么测</th><th>正常表现</th></tr>
+            <tr><td>配置是否生效</td><td>保存后刷新 IM 配置页</td><td>已填项仍显示，密钥显示为 ******</td></tr>
+            <tr><td>签到扫码</td><td>打开会议室 PAD 签到二维码 → 选钉钉登录</td><td>跳转钉钉授权后能回到签到成功页</td></tr>
+            <tr><td>消息推送</td><td>创建一条测试预定</td><td>钉钉收到工作通知（需用户已绑定 dingtalk_user_id）</td></tr>
+            <tr><td>审批回调</td><td>在钉钉里通过/驳回审批</td><td>本系统预定状态同步变更</td></tr>
+        </table>
+
+        <div class="ok">
+            <strong>员工账号如何与钉钉对应？</strong><br>
+            首次钉钉登录时，系统会按<strong>手机号或邮箱</strong>自动匹配已有用户；匹配不上会新建账号。建议先在「用户管理」里维护员工手机号，与钉钉一致。
         </div>
 
-        <h3><span class="step-num">7</span> 配置回调地址</h3>
-        <ol>
-            <li>回到 <a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → <strong>事件与回调</strong></li>
-            <li>设置回调URL为：<code>https://meeting.sisuu.com/api/dingtalk/callback</code></li>
-            <li>设置回调事件：<strong>审批任务回调</strong>、<strong>通讯录变更通知</strong></li>
-        </ol>
-
-        <h3><span class="step-num">8</span> 配置应用权限</h3>
-        <ol>
-            <li><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → <strong>权限管理</strong></li>
-            <li>搜索并申请以下权限：
-                <ul>
-                    <li><strong>通讯录部门信息读权限</strong></li>
-                    <li><strong>通讯录部门成员读权限</strong></li>
-                    <li><strong>成员信息读权限</strong></li>
-                    <li><strong>OA审批实例写权限</strong></li>
-                    <li><strong>企业会话消息发送权限</strong></li>
-                </ul>
-            </li>
-        </ol>
-
-        <h3><span class="step-num">9</span> 发布应用</h3>
-        <ol>
-            <li><a href="https://open.dingtalk.com/" target="_blank">开发者后台</a> → 应用详情 → <strong>版本管理与发布</strong></li>
-            <li>点击 <strong>创建新版本</strong>，填写版本信息</li>
-            <li>点击 <strong>发布</strong>，选择可见范围（建议<strong>全公司</strong>）</li>
-        </ol>
-
         <div class="note">
-            ✅ <strong>完成后：</strong>请将获取到的 <strong>CorpId、AppKey、AppSecret、AgentId、审批流程Code</strong> 提供给系统管理员进行配置。
+            <strong>常见问题</strong><br>
+            • 扫码报 redirect_uri 错误 → 检查安全设置里是否加了 <code>/checkin/</code> 和 OAuth 回调地址<br>
+            • 收不到消息 → 检查权限是否审批通过、通知渠道是否选了钉钉、用户是否用钉钉登录过一次<br>
+            • 审批不同步 → 检查事件订阅 URL 是否带 <code>tenant_id</code>，Token/AESKey 两边是否一致
         </div>
     </div>
 </body>

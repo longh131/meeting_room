@@ -2,9 +2,14 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
-    path: '/pad/:id',
+    path: '/pad/:accessCode',
     name: 'PadDisplay',
     component: () => import('@/views/PadDisplay.vue'),
+  },
+  {
+    path: '/oauth-success',
+    name: 'OAuthSuccess',
+    component: () => import('@/views/OAuthSuccess.vue'),
   },
   {
     path: '/checkin/:accessCode',
@@ -30,6 +35,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/calendar',
+    name: 'Calendar',
+    component: () => import('@/views/Calendar.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/meeting-rooms',
     name: 'MeetingRooms',
     component: () => import('@/views/MeetingRooms.vue'),
@@ -39,6 +50,18 @@ const routes = [
     path: '/meeting-rooms/:id',
     name: 'MeetingRoomDetail',
     component: () => import('@/views/MeetingRoomDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/waitlist',
+    name: 'Waitlist',
+    component: () => import('@/views/Waitlist.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/credit',
+    name: 'CreditHistory',
+    component: () => import('@/views/CreditHistory.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -63,13 +86,13 @@ const routes = [
     path: '/approvals',
     name: 'Approvals',
     component: () => import('@/views/Approvals.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, requiresManager: true }
   },
   {
     path: '/reports',
     name: 'Reports',
     component: () => import('@/views/Reports.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
     path: '/profile',
@@ -99,6 +122,36 @@ const routes = [
     path: '/admin/departments',
     name: 'AdminDepartments',
     component: () => import('@/views/admin/Departments.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/webhooks',
+    name: 'AdminWebhooks',
+    component: () => import('@/views/admin/Webhooks.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/api-tokens',
+    name: 'AdminApiTokens',
+    component: () => import('@/views/admin/ApiTokens.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/booking-policy',
+    name: 'AdminBookingPolicy',
+    component: () => import('@/views/admin/BookingPolicy.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/message-templates',
+    name: 'AdminMessageTemplates',
+    component: () => import('@/views/admin/MessageTemplates.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/room-blackouts',
+    name: 'AdminRoomBlackouts',
+    component: () => import('@/views/admin/RoomBlackouts.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
@@ -148,6 +201,11 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.requiresAdmin && !user.is_admin) {
+    next('/')
+    return
+  }
+
+  if (to.meta.requiresManager && !user.is_admin && !user.is_manager) {
     next('/')
     return
   }

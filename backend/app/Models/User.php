@@ -16,7 +16,7 @@ class User extends Authenticatable
     protected $fillable = [
         'tenant_id', 'name', 'email', 'password', 'phone', 'department_id', 'position',
         'dingtalk_user_id', 'feishu_open_id', 'wework_user_id',
-        'is_manager', 'is_admin', 'is_super_admin', 'credit_score', 'avatar', 'status'
+        'is_manager', 'is_admin', 'credit_score', 'avatar', 'status', 'source', 'calendar_feed_token'
     ];
 
     protected $hidden = [
@@ -56,6 +56,16 @@ class User extends Authenticatable
     public function favorites()
     {
         return $this->hasMany(Favorite::class);
+    }
+
+    public function calendarConnections()
+    {
+        return $this->hasMany(CalendarConnection::class);
+    }
+
+    public function creditLogs()
+    {
+        return $this->hasMany(CreditLog::class);
     }
 
     public function isSuperAdmin()

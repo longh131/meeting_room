@@ -206,9 +206,12 @@ const fetchTenants = async () => {
     }
     const response = await axios.get('/admin/tenants', { params })
     // axios 拦截器已经返回 response.data，所以 response 就是后端返回的数据
-    if (response && response.data) {
+    if (response && Array.isArray(response.data)) {
       tenants.value = response.data
-      total.value = response.total || 0
+      total.value = response.total || response.meta?.total || 0
+    } else if (Array.isArray(response)) {
+      tenants.value = response
+      total.value = response.length
     } else {
       tenants.value = []
       total.value = 0

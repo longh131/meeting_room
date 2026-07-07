@@ -32,8 +32,21 @@ class MeetingRoom extends Model
             ->withPivot('tenant_id');
     }
 
+    public function blackouts()
+    {
+        return $this->hasMany(RoomBlackout::class);
+    }
+
     public function isAvailable($startTime, $endTime, $excludeReservationId = null)
     {
+        if (!$this->status) {
+            return false;
+        }
+
+        if (!$this->isAvailableForBlackout($startTime, $endTime)) {
+            return false;
+        }
+
         $query = $this->reservations()
             ->where('status', '!=', 5)
             ->where('status', '!=', 4)
@@ -51,5 +64,32 @@ class MeetingRoom extends Model
         }
 
         return $query->count() === 0;
+    }
+
+    public function isAvailableForBlackout($startTime, $endTime, $excludeBlackoutId = null): bool
+    {
+        $query = $this->blackouts()
+            ->where(function ($q) use ($startTime, $endTime) {
+                $q->where('start_time', '<', $endTime)
+                  ->where('end_time', '>', $startTime);
+            });
+
+        if ($excludeBlackoutId) {
+            $query->where('id', '!=', $excludeBlackoutId);
+        }
+
+        if ($query->exists()) {
+            return false;
+        }
+
+        $resQuery = $this->reservations()
+            ->where('status', '!=', 5)
+            ->where('status', '!=', 4)
+            ->where(function ($q) use ($startTime, $endTime) {
+                $q->where('start_time', '<', $endTime)
+                  ->where('end_time', '>', $startTime);
+            });
+
+        return $resQuery->count() === 0;
     }
 }
